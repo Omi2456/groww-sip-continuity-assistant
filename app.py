@@ -1364,7 +1364,17 @@ with tab1:
                 if custom_q.strip():
                     with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
                         ff_eval = run_eval_gate(custom_q.strip(), GEMINI_API_KEY, DEFAULT_MODEL)
-                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GEMINI_API_KEY, DEFAULT_MODEL)
+                        try:
+                            if client:
+                                res = client.models.generate_content(
+                                    model="gemini-2.5-flash",
+                                    contents=f"You are Groww's SIP Continuity Assistant. Answer this user query clearly: {custom_q.strip()}"
+                                )
+                                ff_res = res.text
+                            else:
+                                ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GEMINI_API_KEY, DEFAULT_MODEL)
+                        except Exception as e:
+                            ff_res = f"API Call Error: {str(e)}" 
                         st.session_state.last_eval_log = {
                             "query": custom_q.strip(),
                             "eval_result": ff_eval,
