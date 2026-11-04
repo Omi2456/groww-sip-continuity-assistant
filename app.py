@@ -1,3 +1,19 @@
+import os
+import streamlit as st
+from google import genai
+
+api_key = st.secrets.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+try:
+    if api_key:
+        client = genai.Client(api_key=api_key)
+        GENAI_AVAILABLE = True
+    else:
+        client = None
+        GENAI_AVAILABLE = False
+except Exception:
+    client = None
+    GENAI_AVAILABLE = False
+
 """
 Groww SIP Continuity Assistant
 NextLeap Graduation Project MVP: 12-Month First-Time Investor SIP Retention
