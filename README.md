@@ -18,17 +18,19 @@ The **Groww SIP Continuity Assistant** is an AI-native retention engine that ide
 
 ---
 
-## 🎨 Groww Brand Identity & Design System
+## 🎨 Groww Brand Identity & Accessible Design System
 
-The application strictly reflects Groww’s signature dark-mode design system:
+The application strictly reflects Groww’s signature dark-mode design system with high-contrast, accessible typography:
 - **Primary Brand Accent:** `#00D09C` (Groww Mint/Teal Green)
 - **Hover / Secondary Accent:** `#08F6B6`
 - **Dark Mode Background:** `#121417`
 - **Container / Card Background:** `#1E2228` (Secondary Inset: `#181B20`)
 - **Border Hierarchy:** `#2B313A`
+- **High-Contrast Inputs:** Dark card backgrounds (`#1E2228`), crisp white text (`#FFFFFF`), visible light-grey label headers (`#E0E0E0`). No light-grey on white!
 - **Typography & Status Tones:**
+  - Base Font Size: Minimum 14–16px body, 20–28px bold headings.
   - Primary Text: `#FFFFFF`
-  - Secondary Text: `#9B9C9E`
+  - Secondary Text: `#E0E0E0`
   - Warning / SLA Lead-Time Banner: `#F2994A` (Orange)
   - Compliance Block / Danger: `#FF4C4C` (Red)
 
@@ -62,7 +64,7 @@ The application strictly reflects Groww’s signature dark-mode design system:
                ▼
 ┌─────────────────────────────────────────────────────────┐
 │ Generative UI Component Render:                         │
-│ • Grounded Advice + Dynamic Action Cards                │
+│ • Grounded Advice + 3 Win-Win Action Cards              │
 │ • Lead-Time Warning Banner (#F2994A)                    │
 │ • Verified AMFI & Groww Official Citations              │
 └─────────────────────────────────────────────────────────┘
@@ -97,27 +99,36 @@ The application strictly reflects Groww’s signature dark-mode design system:
 
 ## 📱 Multi-Tab UI Structure
 
-### Tab 1: 🌱 SIP Continuity Assistant (Primary Flow)
-- **Step 1 — Fund Setup & Payment Simulation:**
+### Tab 1: 🌱 3-Screen State Machine Wizard Flow (Primary Retention Engine)
+
+- **Screen 1 — 🚀 Start Your Groww SIP:**
   - Mock fund picker (*Nifty 50 Index Fund*, *Parag Parikh Flexi Cap*, *Tata Digital India Fund*, *Mirae Asset Large Cap Fund*).
-  - Monthly SIP Amount (Default: ₹5,000) & AutoPay Debit Date picker (e.g., 3rd of month).
-  - `🚀 Start SIP & Pay` button with 2-second Groww-green spinner and success confirmation: *"🎉 SIP Created! First instalment debited via AutoPay."*
-- **Step 2 — Dynamic Life-Event Friction Controls:**
-  - **Active SIP Card (Simulated Month 4)** displaying folio details, 4 debits completed, total invested ₹20,000, and NAV compounding appreciation (₹21,480).
-  - Dynamic Affordability Slider: *"Rent/Expense Increased by ₹ [ X ]"* (Default: ₹3,500).
-  - Dynamic Salary Date Select: *"New Salary Date: [ X ]th of month"* (5th, 7th, 10th, 12th).
-  - 3 Real-Time Life-Event Shock Triggers:
-    * 🚨 `Trigger Cash Flow Shock (Rent +₹X)`
-    * 📅 `Trigger Salary Delay (Shifted to Xth)`
-    * ⚠️ `Trigger AutoPay Failure (Low Balance)`
-- **Step 3 — AI Reasoning & Dynamic UI Generation:**
-  - **For Rent +₹X:** AI computes remaining affordable budget `(Current SIP - X, min ₹500)` and renders action card: `[✏️ Step-Down SIP to ₹(Current - X)]` + `[⏭️ Skip Next Instalment]`.
-  - **For Salary Shift to Xth:** AI calculates the 3-day buffer `(X + 3 days)` against Groww lead-time rules and renders: `[📆 Shift Debit Date to (X + 3)th]` + NPCI & AMC 3-7 day lead-time warning banner.
-  - **For AutoPay Failure:** AI explains ₹0 Groww penalties, bank bounce caution, zero CIBIL impact, and renders: `[⚡ Pay Failed Debit Now]`.
-  - Clicking any action updates the active SIP card and displays immediate confirmation feedback!
-- **Free-Form Investor Guidance Desk:**
-  - 4 Quick Scenario Triggers (Affordability, Date Mismatch, AutoPay failure, Pause safety).
-  - Natural Language Query input box with Grounded AI response and source citations.
+  - Monthly SIP Amount (₹1,000–₹25,000, default ₹5,000) & AutoPay Debit Date picker (default: 3rd of month).
+  - `Start SIP & Debit First Instalment` action button with 2-second animated loading spinner (`st.spinner`) and transition toast: *"🎉 SIP Active!"*.
+- **Screen 2 — 📱 Active SIP Dashboard (Simulated Month 4):**
+  - **Active SIP Summary Card:** Displays scheme, monthly amount (`₹5,000`), next debit date (`3rd of Month 5`), total invested (`₹20,000`), and compounding value (`₹21,480`, +7.4% XIRR).
+  - **Encountering a Financial Shock?** Section with 3 interactive shock cards:
+    1. 🚨 **Rent / Expense Shock:** Slider for rent increase by `₹X` (default: ₹3,500).
+    2. 📅 **Salary Date Shift:** Selectbox for shifted payout date (`5th, 7th, 10th, 12th`).
+    3. ⚠️ **AutoPay Debit Failed:** Reassures with Groww ₹0 penalty & zero CIBIL impact guarantee.
+  - One-click `Resolve with AI Assistant` button transitions seamlessly to Screen 3.
+- **Screen 3 — 🤖 AI Continuity & Retention Engine:**
+  - `← Back to Active SIP` navigation button.
+  - **AI Adaptive Recommendation:** Rendered in a high-contrast dark card (`#1E2228`) with 16px white text, grounded in official Groww policies.
+  - **NPCI Lead-Time Notice:** `#F2994A` warning banner highlighting 3-7 day AMC update SLAs.
+  - **3 Win-Win Action Cards:**
+    * `[✏️ Execute Step-Down to ₹X]` (Immediately reduces monthly SIP to absorb shock)
+    * `[🚀 Win-Win: Step-Down + Auto-Step-Up in 6 Months]` (Reduces SIP today, auto-restores to original amount in 6 months)
+    * `[⏭️ Execute Skip Month]` (Pauses 1 cycle with guaranteed ₹0 Groww penalty)
+  - **Interactive Execution Animation:** Clicking any action shows a simulated progress bar animation and confirmation banner: *"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty"*.
+  - **Free-Form Consultation Desk:** High-contrast consultation text box at the bottom of Screen 3 with live compliance screening and grounded answers.
+
+### Sidebar Design:
+- **Clean & Uncluttered:** Removed manual API key input and static SLA text boxes.
+- **Auto-Configured AI:** Automatically fetches `GEMINI_API_KEY` from environment/secrets with local grounded engine fallback.
+- **Keeps ONLY:** Groww Brand Logo header and the toggle: `"🛡️ Show Live Eval Gate Audit Logs (For Mentors)"`.
+
+---
 
 ### Tab 2: 📊 Dynamic Flexibility & Continuity Simulator
 - **Interactive Controls:**
@@ -133,16 +144,14 @@ The application strictly reflects Groww’s signature dark-mode design system:
   - **Outright Cancel:** Illustrates the catastrophic **₹4.5L – ₹8.0L+ wealth deficit** suffered by dropouts who never resume.
 - **Interactive Plotly Visualizer:** Dynamic multi-curve wealth trajectory.
 
+---
+
 ### Tab 3: 🛡️ AI Quality Gate & Evidence Audit Log (Mentor Testing Mode)
 - **20-Item Golden Set Benchmark Matrix:** Displays all 20 test cases with intent taxonomy, expected gate decisions, and grounding references.
 - **Live Mentor Compliance Test Suite:**
   - Button 1: *"Run Valid Query"* -> Instant PASS verification (98% confidence).
   - Button 2: *"Simulate Advisory Violation"* -> Instant BLOCKED verification with violation reason.
   - Real-time latency tracking (ms) and safety audit display.
-
-### Sidebar Audit Mode:
-- Toggle: **"Show Live Eval Gate Audit Logs (For Mentors)"** for continuous transparency.
-- API Key fallback input & Model switcher (`gemini-2.5-flash` / `gemini-1.5-flash`).
 
 ---
 
@@ -201,7 +210,6 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure API Key (Optional)
-Create a `.env` file from `.env.example`:
 ```bash
 cp .env.example .env
 ```
@@ -232,14 +240,7 @@ groww-sip-continuity-assistant/
 ├── .gitignore            # Git exclusion rules
 ├── requirements.txt      # Python dependencies (streamlit, google-genai, etc.)
 ├── knowledge_base.py     # Official Groww SIP rules & 20-Item Golden Set Benchmark
-├── app.py                # Main Streamlit AI application & Custom CSS
+├── app.py                # Main Streamlit AI application with 3-Screen Wizard Flow & High-Contrast CSS
 ├── test_app.py           # Verification test suite for Golden Set & Grounding
 └── README.md             # Project documentation & mentor evaluation guide
 ```
-
----
-
-## 🎓 NextLeap Capstone Project Credits
-- **Project Title:** Groww SIP Continuity Assistant
-- **Target Persona:** First-Time Mutual Fund Investors (12-Month Retention Window)
-- **Product Pillars:** Empathy, ₹0 Penalty Transparency, Compounding Protection, and SEBI Compliance Rigor.
