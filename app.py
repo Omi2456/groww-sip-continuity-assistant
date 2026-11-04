@@ -910,7 +910,6 @@ with tab1:
         st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
 
         # Exactly 1 clean setup card (no ghost container)
-        st.markdown('<div class="groww-card">', unsafe_allow_html=True)
         col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
         
         with col_s1:
@@ -975,8 +974,6 @@ with tab1:
             st.toast("🎉 SIP Started Successfully!", icon="🎉")
             st.rerun()
 
-        st.markdown('</div>', unsafe_allow_html=True)
-
     # ==========================================================================
     # SCREEN 2: 📱 Step 2 - Active SIP Dashboard (Simulated Month 4)
     # ==========================================================================
@@ -1031,7 +1028,6 @@ with tab1:
         col_c1, col_c2, col_c3 = st.columns(3)
 
         with col_c1:
-            st.markdown('<div class="shock-card">', unsafe_allow_html=True)
             st.markdown("""
             <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
                 🚨 1. Rent / Cash-Flow Shock
@@ -1055,10 +1051,8 @@ with tab1:
                 st.session_state.shock_type = "CASH_FLOW_SHOCK"
                 st.session_state.current_screen = 3
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col_c2:
-            st.markdown('<div class="shock-card">', unsafe_allow_html=True)
             st.markdown("""
             <div style="color:#F2994A; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
                 📅 2. Salary Date Shift
@@ -1083,10 +1077,8 @@ with tab1:
                 st.session_state.shock_type = "SALARY_DELAY"
                 st.session_state.current_screen = 3
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col_c3:
-            st.markdown('<div class="shock-card">', unsafe_allow_html=True)
             st.markdown("""
             <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
                 ⚠️ 3. AutoPay Debit Failed
@@ -1103,7 +1095,6 @@ with tab1:
                 st.session_state.shock_type = "AUTOPAY_FAILURE"
                 st.session_state.current_screen = 3
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================================================
     # SCREEN 3: 🤖 Step 3 - AI Continuity & Retention Engine
@@ -1234,20 +1225,18 @@ with tab1:
             st.session_state.pipeline_active = True
             st.rerun()
 
-        # Render Pipeline & Calendar Nudge if pipeline was executed
+        # Single unified success card after any Execute action
         if st.session_state.pipeline_active:
-            st.markdown("""
-            <div style="background:#15181D; border:1px solid #00D09C; border-radius:10px; padding:14px 18px; margin:16px 0;">
-                <div style="color:#00D09C; font-weight:700; font-size:14px; margin-bottom:6px;">📡 NPCI Processing Pipeline Tracker:</div>
-                <div style="color:#FFFFFF; font-size:15px; font-weight:600;">
-                    [ 🟢 Request Received ] ➔ [ 🟢 Groww Verification ] ➔ [ ⏳ Bank eNACH Sync (3 Days) ]
+            with st.container():
+                st.markdown("""
+                <div style="background:#0F2620; border:1.5px solid #00D09C; border-radius:12px; padding:18px 22px; margin:16px 0;">
+                    <div style="color:#00D09C; font-weight:700; font-size:1.1rem; margin-bottom:6px;">
+                        ✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.
+                    </div>
                 </div>
-                <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">Reference ID: GW-NPCI-74921 • Sponsoring Bank: NPCI Mandate Switch</div>
-            </div>
-            <div style="background:#181B20; border:1px solid #2B313A; border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:14px; color:#E0E0E0;">
-                📅 <b>Set WhatsApp / Calendar Nudge:</b> Follow-up scheduled for Month 5 Re-evaluation.
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                if st.button("📅 Set Reminder for Month 5 Re-evaluation", key="btn_set_reminder"):
+                    st.toast("🎉 Reminder scheduled! You will receive a WhatsApp nudge at Month 5 and an SMS 7 days prior to debit.")
 
         # Action Cards Section with Edge-Case Defenses
         st.markdown("##### 🚀 3 Win-Win Action Cards:")
