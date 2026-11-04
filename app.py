@@ -5,6 +5,7 @@ NextLeap Graduation Project MVP: 12-Month First-Time Investor SIP Retention
 
 import json
 import os
+import re
 import time
 from datetime import datetime
 import pandas as pd
@@ -59,7 +60,6 @@ GROWW_ACCESSIBLE_CSS = """
     --groww-teal-hover: #08F6B6;
     --groww-dark: #121417;
     --groww-card: #1E2228;
-    --groww-card-hover: #262B34;
     --groww-border: #2B313A;
     --groww-text-primary: #FFFFFF;
     --groww-text-secondary: #E0E0E0;
@@ -68,7 +68,7 @@ GROWW_ACCESSIBLE_CSS = """
     --groww-danger: #FF4C4C;
 }
 
-/* App Background & Typography Hierarchy (Min 14px Base) */
+/* App Background & Typography Hierarchy (Min 14px-16px Base) */
 html, body, [class*="css"], .stApp {
     background-color: #121417 !important;
     color: #FFFFFF !important;
@@ -88,7 +88,7 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
+    padding: 18px 24px;
     background: linear-gradient(135deg, #1E2228 0%, #15181D 100%);
     border: 1px solid #2B313A;
     border-radius: 14px;
@@ -153,12 +153,12 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Interactive Shock Cards */
+/* Interactive Shock Resolution Cards */
 .shock-card {
     background: #181B20;
     border: 1px solid #2B313A;
     border-radius: 12px;
-    padding: 18px;
+    padding: 20px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -170,27 +170,43 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     border-color: #00D09C;
     background: #1E2228;
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 208, 156, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 208, 156, 0.15);
 }
 
-/* Crisp High-Contrast Input Elements (Eliminates Light Grey on White) */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stNumberInput > div > div > input {
+/* High-Contrast Inputs: st.text_area and st.text_input */
+.stTextArea textarea,
+.stTextInput input,
+.stNumberInput input {
     background-color: #1E2228 !important;
     color: #FFFFFF !important;
-    border: 1px solid #2B313A !important;
+    border: 1px solid #00D09C !important;
     border-radius: 8px !important;
     font-size: 15px !important;
     line-height: 1.5 !important;
     padding: 12px 14px !important;
+    caret-color: #00D09C !important;
 }
 
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus,
-.stNumberInput > div > div > input:focus {
-    border-color: #00D09C !important;
-    box-shadow: 0 0 0 1px #00D09C !important;
+.stTextArea textarea:focus,
+.stTextInput input:focus,
+.stNumberInput input:focus {
+    border-color: #08F6B6 !important;
+    box-shadow: 0 0 8px rgba(0, 208, 156, 0.4) !important;
+    background-color: #1E2228 !important;
+    color: #FFFFFF !important;
+}
+
+.stTextArea > div,
+.stTextInput > div,
+.stNumberInput > div {
+    background-color: transparent !important;
+}
+
+.stTextArea div[data-baseweb="textarea"],
+.stTextInput div[data-baseweb="input"] {
+    background-color: #1E2228 !important;
+    border: 1px solid #00D09C !important;
+    border-radius: 8px !important;
 }
 
 .stTextInput input::placeholder,
@@ -198,7 +214,7 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     color: #8C939F !important;
 }
 
-/* High-Contrast Input Labels */
+/* Input Labels Above Boxes */
 .stTextInput label,
 .stTextArea label,
 .stSelectbox label,
@@ -210,32 +226,36 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     margin-bottom: 6px !important;
 }
 
-/* Selectbox Dropdown Styling */
+/* Selectbox Dropdown */
 .stSelectbox [data-baseweb="select"] > div {
     background-color: #1E2228 !important;
     color: #FFFFFF !important;
-    border: 1px solid #2B313A !important;
+    border: 1px solid #00D09C !important;
     border-radius: 8px !important;
     font-size: 15px !important;
 }
 
-/* Buttons: Groww Mint Green with Bold Dark Text */
+/* Force All Buttons: Groww Mint Green, Bold Dark Text, 14px */
 .stButton > button {
     background-color: #00D09C !important;
     color: #121417 !important;
     font-weight: 700 !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
     border: none !important;
     border-radius: 8px !important;
-    padding: 10px 22px !important;
+    padding: 10px 20px !important;
     letter-spacing: 0.2px !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .stButton > button:hover {
     background-color: #08F6B6 !important;
-    box-shadow: 0 4px 16px rgba(0, 208, 156, 0.4) !important;
-    transform: scale(1.02) !important;
+    box-shadow: 0 4px 16px rgba(0, 208, 156, 0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(0px) !important;
 }
 
 /* Secondary Button styling */
@@ -268,16 +288,6 @@ h5 { font-size: 16px !important; font-weight: 600 !important; color: #E0E0E0 !im
     border-radius: 12px;
     padding: 22px;
     margin: 20px 0;
-}
-
-.compliance-title {
-    color: #FF4C4C;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 /* Streamlit Tabs Customization */
@@ -355,31 +365,30 @@ st.markdown(GROWW_ACCESSIBLE_CSS, unsafe_allow_html=True)
 # ==============================================================================
 # 2. STATE MANAGEMENT & CLEAN SIDEBAR
 # ==============================================================================
-# Wizard flow state: 1 (Start), 2 (Active SIP), 3 (AI Retention Engine)
-if "wizard_screen" not in st.session_state:
-    st.session_state.wizard_screen = 2  # Default to active Month 4 for instant testing
+# Strict 3-Screen State Machine (default = 1)
+if "current_screen" not in st.session_state:
+    st.session_state.current_screen = 1
 
 if "active_sip" not in st.session_state:
     st.session_state.active_sip = {
-        "created": True,
         "fund": "Nifty 50 Index Fund",
-        "amount": 5000,
-        "debit_date": 3,
+        "amount": 3500,
+        "debit_date": "3rd of month",
         "month": 4,
         "instalments_paid": 4,
-        "total_invested": 20000,
-        "current_value": 21480,
+        "total_invested": 14000,
+        "current_value": 15036,
         "status": "Active"
     }
 
-if "current_scenario" not in st.session_state:
-    st.session_state.current_scenario = "CASH_FLOW_SHOCK"
+if "shock_type" not in st.session_state:
+    st.session_state.shock_type = "CASH_FLOW_SHOCK"
 
-if "scenario_params" not in st.session_state:
-    st.session_state.scenario_params = {
-        "x_rent": 3500,
-        "x_salary_date": 7
-    }
+if "x_rent" not in st.session_state:
+    st.session_state.x_rent = 1500
+
+if "x_salary_date" not in st.session_state:
+    st.session_state.x_salary_date = "7th"
 
 if "last_eval_log" not in st.session_state:
     st.session_state.last_eval_log = None
@@ -387,13 +396,10 @@ if "last_eval_log" not in st.session_state:
 if "action_feedback" not in st.session_state:
     st.session_state.action_feedback = None
 
-if "toast_msg" not in st.session_state:
-    st.session_state.toast_msg = None
-
 if "free_form_query" not in st.session_state:
     st.session_state.free_form_query = ""
 
-# Clean Sidebar: Only Brand Header and Live Audit Mode Toggle
+# Clean Sidebar: Keep only Groww Logo and Live Audit Mode Toggle
 with st.sidebar:
     st.markdown("""
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
@@ -407,29 +413,60 @@ with st.sidebar:
     
     st.markdown("<hr style='border-color:#2B313A; margin:16px 0;'>", unsafe_allow_html=True)
     
-    # Toggle for Mentor Live Audit Logs
     audit_mode = st.toggle(
         "🛡️ Show Live Eval Gate Audit Logs (For Mentors)",
         value=True,
-        help="Crucial for Mentors: Real-time compliance classification, safety gates, and confidence scores."
+        help="Real-time compliance classification, safety gates, and confidence scores."
     )
     
     st.markdown("<hr style='border-color:#2B313A; margin:16px 0;'>", unsafe_allow_html=True)
     
-    # Engine status pill
     if GEMINI_API_KEY:
         st.markdown('<span class="badge-pass">🟢 Live Gemini AI Active</span>', unsafe_allow_html=True)
     else:
         st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local Grounded Engine Active</span>', unsafe_allow_html=True)
 
-# Show toast if set
-if st.session_state.toast_msg:
-    st.toast(st.session_state.toast_msg, icon="🎉")
-    st.session_state.toast_msg = None
+# ==============================================================================
+# 3. AI COMPLIANCE EVAL-GATE & CLEAN TEXT FORMATTING
+# ==============================================================================
 
-# ==============================================================================
-# 3. AI COMPLIANCE EVAL-GATE & GROUNDING ENGINE
-# ==============================================================================
+def clean_ai_formatting(text: str) -> str:
+    """
+    Cleans raw markdown artifacts from AI outputs:
+    - Strips raw ** and converts to <b>bold</b>
+    - Strips raw ### headers into clean styled titles
+    - Formats bullet points cleanly with Groww teal markers
+    """
+    if not text:
+        return ""
+    
+    lines = text.split("\n")
+    cleaned_lines = []
+    for line in lines:
+        line_s = line.strip()
+        if not line_s:
+            cleaned_lines.append("")
+            continue
+        # Header removal
+        if line_s.startswith("### "):
+            line_s = f"<div style='font-size:17px; font-weight:700; color:#00D09C; margin:12px 0 6px 0;'>{line_s[4:]}</div>"
+        elif line_s.startswith("## "):
+            line_s = f"<div style='font-size:18px; font-weight:700; color:#00D09C; margin:14px 0 8px 0;'>{line_s[3:]}</div>"
+        elif line_s.startswith("# "):
+            line_s = f"<div style='font-size:20px; font-weight:700; color:#00D09C; margin:16px 0 10px 0;'>{line_s[2:]}</div>"
+        elif line_s.startswith("• ") or line_s.startswith("- ") or line_s.startswith("* "):
+            content = line_s[2:]
+            line_s = f"<div style='margin-bottom:8px; display:flex; gap:10px;'><span style='color:#00D09C; font-weight:700;'>•</span><span>{content}</span></div>"
+        cleaned_lines.append(line_s)
+    
+    joined = "\n".join(cleaned_lines)
+    # Convert **text** to <b>text</b>
+    joined = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', joined)
+    # Convert *text* to <i>text</i>
+    joined = re.sub(r'\*([^\*]+)\*', r'<i>\1</i>', joined)
+    # Replace newlines
+    joined = joined.replace("\n\n", "<br><br>").replace("\n", "<br>")
+    return joined
 
 def get_gemini_client(api_key: str):
     """Instantiate Gemini client using google-genai SDK."""
@@ -447,7 +484,6 @@ def offline_compliance_guard(query: str) -> dict:
     """
     q_lower = query.lower()
     
-    # Check for unallowed advice / stock picking / return guarantees / speculative crypto
     unallowed_phrases = [
         "which fund", "which stock", "best stock", "top stock", "recommend a fund",
         "recommend fund", "should i buy", "which small cap", "best mutual fund",
@@ -465,7 +501,6 @@ def offline_compliance_guard(query: str) -> dict:
             "detected_intent": "UNALLOWED_ADVICE"
         }
     
-    # Classify intent
     if any(k in q_lower for k in ["afford", "can't pay", "cannot afford", "step down", "step-down", "reduce", "skip", "money tight", "medical", "rent"]):
         intent = "AFFORDABILITY"
     elif any(k in q_lower for k in ["salary", "date", "delay", "autopay date", "shift", "mandate", "deducted"]):
@@ -487,7 +522,6 @@ def offline_compliance_guard(query: str) -> dict:
 def run_eval_gate(user_query: str, api_key: str = GEMINI_API_KEY, model_name: str = DEFAULT_MODEL) -> dict:
     """
     Run Eval-Gate & Compliance Shield using Gemini with strict JSON output schema.
-    Falls back gracefully to deterministic rule-based evaluation if API call fails.
     """
     client = get_gemini_client(api_key)
     
@@ -542,16 +576,15 @@ Do not include any markdown formatting, code fences (no ```json), or explanatory
 
 def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = GEMINI_API_KEY, model_name: str = DEFAULT_MODEL, lifecycle_context: dict = None) -> dict:
     """
-    Generate grounded response adhering to official Groww rules, with dynamic action cards and warnings.
+    Generate grounded response adhering to official Groww rules, cleaned of raw markdown artifacts.
     """
     intent = eval_result.get("detected_intent", "GENERAL")
     
-    # If not compliant, return safety fallback immediately
     if not eval_result.get("is_compliant", False) or eval_result.get("confidence_score", 0) < 0.75:
         return {
             "type": "COMPLIANCE_VIOLATION",
             "title": "⚠️ Compliance Safeguard Triggered",
-            "message": (
+            "message": clean_ai_formatting(
                 "Under SEBI regulations and Groww's Customer Safety Guidelines, the SIP Continuity Assistant "
                 "cannot provide stock/fund recommendations, predict market returns, or suggest specific investment purchases. "
                 "Our assistant is dedicated strictly to helping you manage your active SIP schedules, avoid accidental cancellations, "
@@ -576,15 +609,14 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
 DYNAMIC LIFE-EVENT SIMULATION DATA:
 - Trigger Event: {lifecycle_context.get('type')}
 - Current Monthly SIP: ₹{lifecycle_context.get('current_sip')}
-- Current Debit Date: {lifecycle_context.get('current_debit_date')}rd
+- Current Debit Date: {lifecycle_context.get('current_debit_date')}
 - Rent/Expense Increase (X): ₹{lifecycle_context.get('x_rent', 0)}
-- New Salary Date (Xth): {lifecycle_context.get('x_salary_date', 0)}th
+- New Salary Date (Xth): {lifecycle_context.get('x_salary_date', '')}
 - Calculated Step-Down Value: ₹{lifecycle_context.get('calculated_step_down', 0)}
-- Calculated Safe Debit Date: {lifecycle_context.get('calculated_safe_date', 0)}th
 """
         prompt = f"""
 You are the official 'Groww SIP Continuity Assistant'.
-Your goal is to reassure first-time investors (12-month cohort) who are anxious about missing SIP payments, salary delays, or budget crunches, and guide them to retain their compounding habit.
+Your goal is to reassure first-time investors who are anxious about missing SIP payments, salary delays, or budget crunches, and guide them to retain their compounding habit.
 
 OFFICIAL GROWW POLICIES (STRICT GROUNDING):
 {grounding_context}
@@ -597,11 +629,10 @@ DETECTED INTENT: {intent}
 
 INSTRUCTIONS:
 1. Provide a calm, reassuring, highly structured response using bullet points.
-2. If exact numbers (₹ Rent shock, calculated Step-Down, or Safe Debit Date) are present in DYNAMIC LIFE-EVENT SIMULATION DATA, explicitly quote and explain those exact values!
-3. Emphasize Groww's ₹0 penalty policy and zero CIBIL impact where applicable.
+2. Quote exact numbers if provided in simulation data.
+3. Emphasize Groww's ₹0 penalty policy and zero CIBIL impact.
 4. Highlight the 3-7 working days lead time rule for any SIP edit.
-5. If the user mentions pausing or cancelling, emphasize that all existing units remain 100% safe and actively compounding in their folio, and explain why pausing is far better than outright cancellation.
-6. Keep tone conversational, empathetic, and professional (Groww tone).
+5. Emphasize that all existing units remain 100% safe and actively compounding in their folio.
 """
         try:
             resp = client.models.generate_content(
@@ -615,139 +646,83 @@ INSTRUCTIONS:
         except Exception:
             ai_text = None
 
-    # Fallback to high-fidelity template logic
     if not ai_text:
         if ctx_type == "CASH_FLOW_SHOCK":
-            c_sip = lifecycle_context.get("current_sip", 5000)
-            x_r = lifecycle_context.get("x_rent", 3500)
-            s_down = lifecycle_context.get("calculated_step_down", 1500)
+            c_sip = lifecycle_context.get("current_sip", 3500)
+            x_r = lifecycle_context.get("x_rent", 1500)
+            s_down = lifecycle_context.get("calculated_step_down", 2000)
             ai_text = (
-                f"We understand your monthly expenses just increased by **₹{x_r:,}**! Don't worry—you do **not** need to cancel your SIP.\n\n"
-                f"**Your Grounded Retention Strategy:**\n"
-                f"• **Option 1: Step-Down to ₹{s_down:,} (Recommended):** By adjusting your monthly SIP from ₹{c_sip:,} down to **₹{s_down:,}** (Current ₹{c_sip:,} - Expense ₹{x_r:,}), "
-                f"you immediately absorb the expense shock while keeping your rupee-cost averaging and compounding habit 100% alive!\n"
-                f"• **Option 2: Win-Win Step-Down + Auto-Step-Up:** Lower to ₹{s_down:,} for 6 months, after which Groww automatically restores your ₹{c_sip:,} SIP.\n"
-                f"• **Option 3: Skip Month 4 Instalment:** Skip this month's debit with **₹0 Groww penalty** and **₹0 AMC fee**. Your SIP resumes automatically next month.\n\n"
-                f"⏱️ *Groww SLA Note: Request changes at least 3 to 7 working days before your due date.*"
+                f"We understand your monthly expenses just increased by ₹{x_r:,}!\n\n"
+                f"• Option 1: Step-Down to ₹{s_down:,} (Recommended): By reducing your monthly commitment from ₹{c_sip:,} to ₹{s_down:,}, you absorb the household expense shock while keeping your rupee-cost averaging and folio compounding 100% alive!\n"
+                f"• Option 2: Win-Win Auto-Step-Up: Lower to ₹{s_down:,} for 6 months, after which Groww automatically restores your ₹{c_sip:,} SIP.\n"
+                f"• Option 3: Skip Upcoming Instalment: Skip Month 5 debit with ₹0 Groww penalty and ₹0 AMC fee. Resumes automatically on Month 6.\n\n"
+                f"Groww SLA Notice: Request changes at least 3 to 7 working days before your due date."
             )
         elif ctx_type == "SALARY_DELAY":
-            x_sal = lifecycle_context.get("x_salary_date", 7)
-            c_deb = lifecycle_context.get("current_debit_date", 3)
-            s_date = lifecycle_context.get("calculated_safe_date", 10)
+            x_sal = lifecycle_context.get("x_salary_date", "7th")
+            c_deb = lifecycle_context.get("current_debit_date", "3rd of month")
             ai_text = (
-                f"Your salary arrival shifted from the 1st to the **{x_sal}th**, while your active AutoPay is scheduled on the **{c_deb}rd**.\n\n"
-                f"**Mandate Alignment & Safety Buffer:**\n"
-                f"• **Recommended Date Shift:** To eliminate debit failures and bank bounce fees, move your SIP debit date to the **{s_date}th** (3-day safety buffer after your {x_sal}th salary payout).\n"
-                f"• **Mandate Sync SLA:** UPI AutoPay re-alignment takes **3–5 working days** for bank clearance.\n"
-                f"• **Lead-Time Rule:** Ensure you initiate this date change at least **3 to 7 working days** prior to the next debit date."
+                f"Your salary arrival shifted to the {x_sal}, while your active AutoPay is scheduled on {c_deb}.\n\n"
+                f"• Recommended Date Shift: To eliminate debit failures and bank bounce fees, move your SIP debit date to 3 days after your {x_sal} salary payout (e.g. 10th of month).\n"
+                f"• Mandate Sync SLA: UPI AutoPay re-alignment takes 3–5 working days for bank clearance.\n"
+                f"• Lead-Time Rule: Ensure you submit this date shift at least 3 to 7 working days prior to the next debit date."
             )
         elif ctx_type == "AUTOPAY_FAILURE":
-            c_sip = lifecycle_context.get("current_sip", 5000)
+            c_sip = lifecycle_context.get("current_sip", 3500)
             ai_text = (
-                f"Take a deep breath—your investment journey and accumulated units remain **100% safe**!\n\n"
-                f"**Groww Policy & Immediate Resolution:**\n"
-                f"• **₹0 Groww Penalty:** Groww charges zero penalties or hidden fees for failed AutoPay debits.\n"
-                f"• **Zero CIBIL Impact:** Mutual fund SIPs are investments, not credit card bills. A failed debit has **zero impact** on your CIBIL score.\n"
-                f"• **Bank Caution:** Your bank may charge a small ECS/NACH bounce fee (~₹250–₹500) for insufficient funds.\n"
-                f"• **Instant Recovery:** Clear your **₹{c_sip:,}** instalment immediately via UPI to ensure continuous unit allotment."
+                f"Take a deep breath—your investment journey and accumulated units remain 100% safe!\n\n"
+                f"• ₹0 Groww Penalty: Groww charges zero penalties or hidden fees for failed AutoPay debits.\n"
+                f"• Zero CIBIL Impact: Mutual fund SIPs are investments, not loan repayments. A failed debit has zero impact on your CIBIL score.\n"
+                f"• Bank Caution: Your bank may charge an ECS bounce charge (~₹250–₹500) for insufficient funds.\n"
+                f"• Instant Recovery: Clear your ₹{c_sip:,} instalment immediately via UPI to ensure continuous unit allotment."
             )
         elif intent == "AFFORDABILITY":
             ai_text = (
-                "Don't worry! Temporary budget crunches are very common, and you do **not** need to stop or cancel your SIP.\n\n"
-                "**Here are your best options to stay on track:**\n"
-                "• **Option 1: Temporary Step-Down (Recommended):** Reduce your instalment amount (e.g., from ₹5,000 down to ₹1,000 or the fund minimum of ₹500). "
-                "This maintains your investing habit, benefits from rupee-cost averaging, and can be increased back at any time.\n"
-                "• **Option 2: Skip Upcoming Instalment:** Skip this month's payment without cancelling. Groww and the AMC charge **₹0 penalty**. Your SIP resumes automatically next month.\n\n"
-                "⏱️ *Remember: Request changes at least 3 to 7 working days before your due date.*"
+                "Don't worry! Temporary budget crunches are very common, and you do not need to cancel your SIP.\n\n"
+                "• Option 1: Temporary Step-Down (Recommended): Reduce your instalment amount (e.g. from ₹3,500 down to ₹1,000 or the fund minimum of ₹500). This maintains your investing habit and benefits from rupee-cost averaging.\n"
+                "• Option 2: Skip Upcoming Instalment: Skip this month's payment without cancelling. Groww and the AMC charge ₹0 penalty. Your SIP resumes automatically next month.\n\n"
+                "Remember: Request changes at least 3 to 7 working days before your due date."
             )
         elif intent == "DATE_MISMATCH":
             ai_text = (
                 "Salary dates often change or experience delays. Aligning your SIP date prevents failed debits and bank bounce fees.\n\n"
-                "**Recommended Action:**\n"
-                "• **Shift AutoPay Date:** Move your debit date to 3–5 days **after** your salary credit date (e.g., if salary arrives between the 1st and 5th, set SIP to the **10th**).\n"
-                "• **Mandate Sync:** UPI AutoPay takes **3–5 working days** to re-align, while NetBanking mandates take 7–30 days.\n"
-                "• **Lead-Time Rule:** Ensure you submit this date shift at least **3 to 7 working days** prior to the next debit date."
+                "• Shift AutoPay Date: Move your debit date to 3–5 days after your salary credit date.\n"
+                "• Mandate Sync: UPI AutoPay takes 3–5 working days to re-align, while NetBanking mandates take 7–30 days.\n"
+                "• Lead-Time Rule: Ensure you submit this date shift at least 3 to 7 working days prior to the next debit date."
             )
         elif intent == "PAYMENT_FAILURE":
             ai_text = (
                 "Take a deep breath—your investment journey is completely safe!\n\n"
-                "**Groww ₹0 Penalty & Protection Policy:**\n"
-                "• **Zero Penalty from Groww:** Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
-                "• **Zero CIBIL Impact:** Investment SIPs are **not** loans or credit cards. A failed debit has **zero impact** on your CIBIL score.\n"
-                "• **Bank Caution:** Your bank may charge a small ECS bounce fee (typically ₹250–₹500) if funds were insufficient.\n"
-                "• **Instant Recovery:** You can immediately pay this instalment using the **⚡ Pay Failed Debit Now** button via UPI."
+                "• Zero Penalty from Groww: Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
+                "• Zero CIBIL Impact: Investment SIPs are not loans or credit cards. A failed debit has zero impact on your CIBIL score.\n"
+                "• Bank Caution: Your bank may charge a small ECS bounce fee (typically ₹250–₹500) if funds were insufficient.\n"
+                "• Instant Recovery: You can immediately pay this instalment using the Pay Now button via UPI."
             )
         elif intent == "PAUSE_RECOVERY":
             ai_text = (
-                "Your invested wealth and accumulated mutual fund units are **100% safe**!\n\n"
-                "**Pause vs. Cancel Difference:**\n"
-                "• **When you Pause:** Future debits stop for 1 to 6 months. Your existing units stay invested in the market, continuing to compound and earn returns. Your mandate stays alive.\n"
-                "• **When you Cancel:** Your mandate is terminated. While past units remain until redeemed, historical data shows **67% of first-time investors never restart**, permanently losing compounding growth.\n"
-                "• **Recommendation:** Choose 'Pause' instead of 'Cancel' if you need a break."
+                "Your invested wealth and accumulated mutual fund units are 100% safe!\n\n"
+                "• When you Pause: Future debits stop for 1 to 6 months. Your existing units stay invested in the market, continuing to compound and earn returns. Your mandate stays alive.\n"
+                "• When you Cancel: Your mandate is terminated. Historical data shows 67% of first-time investors never restart, permanently losing compounding growth.\n"
+                "• Recommendation: Choose 'Pause' instead of 'Cancel' if you need a break."
             )
         else:
             ai_text = (
                 "Groww provides flexible SIP management so you never have to break your long-term compounding journey.\n\n"
-                "• **Lead-Time Rule:** Any modification (date shift, pause, step-down, or skip) requires **3 to 7 working days** to take effect at the AMC.\n"
-                "• **₹0 Penalty Policy:** Groww charges ₹0 fee for missed, paused, or modified SIP instalments.\n"
-                "• **Flexibility First:** You can pause for up to 6 months or step down to as low as ₹500 rather than cancelling."
+                "• Lead-Time Rule: Any modification (date shift, pause, step-down, or skip) requires 3 to 7 working days to take effect at the AMC.\n"
+                "• ₹0 Penalty Policy: Groww charges ₹0 fee for missed, paused, or modified SIP instalments.\n"
+                "• Flexibility First: You can pause for up to 6 months or step down rather than cancelling."
             )
 
-    # Dynamic action cards
-    action_cards = []
-    if ctx_type == "CASH_FLOW_SHOCK":
-        s_down = lifecycle_context.get("calculated_step_down", 1500)
-        c_sip = lifecycle_context.get("current_sip", 5000)
-        action_cards = [
-            {"id": "step_down_exec", "label": f"✏️ Execute Step-Down to ₹{s_down:,}", "desc": f"Reduces monthly SIP to ₹{s_down:,} now to absorb shock", "action": "STEP_DOWN", "val": s_down},
-            {"id": "win_win_stepup", "label": f"🚀 Win-Win: Step-Down + Auto-Step-Up in 6 Mo", "desc": f"Reduces to ₹{s_down:,} today; auto-restores to ₹{c_sip:,} in 6 months", "action": "WIN_WIN", "val": s_down},
-            {"id": "skip_exec", "label": "⏭️ Execute Skip Month", "desc": "Pauses 1 upcoming cycle with guaranteed ₹0 penalty", "action": "SKIP", "val": 0}
-        ]
-    elif ctx_type == "SALARY_DELAY":
-        s_date = lifecycle_context.get("calculated_safe_date", 10)
-        c_sip = lifecycle_context.get("current_sip", 5000)
-        action_cards = [
-            {"id": "shift_date_exec", "label": f"📆 Shift Debit Date to {s_date}th", "desc": f"Aligns AutoPay 3 days after salary payout", "action": "SHIFT_DATE", "val": s_date},
-            {"id": "win_win_date", "label": f"🚀 Win-Win: Shift to {s_date}th + Mandate Buffer", "desc": "Auto-verifies bank balance buffer before debiting", "action": "MANDATE", "val": s_date},
-            {"id": "skip_exec_sal", "label": "⏭️ Execute Skip Month", "desc": "Skip upcoming cycle while bank mandate re-aligns", "action": "SKIP", "val": 0}
-        ]
-    elif ctx_type == "AUTOPAY_FAILURE":
-        c_sip = lifecycle_context.get("current_sip", 5000)
-        action_cards = [
-            {"id": "pay_now_exec", "label": "⚡ Pay Failed Debit Now", "desc": f"Instantly clear ₹{c_sip:,} via UPI before AMC cutoff", "action": "PAY_NOW", "val": c_sip},
-            {"id": "win_win_fail", "label": f"🚀 Win-Win: Pay Now + Step-Down to ₹{max(500, c_sip//2):,}", "desc": "Clears month 4, lowers month 5 to prevent repeated bounce", "action": "STEP_DOWN", "val": max(500, c_sip//2)},
-            {"id": "retry_exec", "label": "🔄 AutoPay 48h Retry Window", "desc": "Groww will re-attempt deduction in 24-48 hours", "action": "RETRY", "val": None}
-        ]
-    elif intent == "AFFORDABILITY":
-        action_cards = [
-            {"id": "step_down_1k", "label": "✏️ Apply ₹1,000 Step-Down", "desc": "Reduce monthly SIP to ₹1,000 to maintain habit", "action": "STEP_DOWN", "val": 1000},
-            {"id": "skip_1m", "label": "⏭️ Skip Next Instalment", "desc": "Skip upcoming cycle with ₹0 Groww penalty", "action": "SKIP", "val": 0}
-        ]
-    elif intent == "DATE_MISMATCH":
-        action_cards = [
-            {"id": "shift_date_10th", "label": "📆 Shift Date to 10th", "desc": "Align debit date 5 days after salary payout", "action": "SHIFT_DATE", "val": 10},
-            {"id": "align_mandate", "label": "🏦 Align AutoPay Mandate", "desc": "Verify UPI AutoPay buffer status", "action": "MANDATE", "val": None}
-        ]
-    elif intent == "PAYMENT_FAILURE":
-        action_cards = [
-            {"id": "pay_now_upi", "label": "⚡ Pay Failed Debit Now", "desc": "Clear missed instalment instantly via UPI", "action": "PAY_NOW", "val": 5000},
-            {"id": "retry_window", "label": "🔄 Schedule AutoPay Retry", "desc": "Retry debit in 24-48 hour window", "action": "RETRY", "val": None}
-        ]
-    elif intent == "PAUSE_RECOVERY":
-        action_cards = [
-            {"id": "pause_3m", "label": "⏸️ Pause SIP for 3 Months", "desc": "Suspend debits temporarily, keep units compounding", "action": "PAUSE", "val": 3},
-            {"id": "keep_units_safe", "label": "🛡️ Maintain Folio Units", "desc": "Keep existing investment active without fresh debit", "action": "HOLD", "val": None}
-        ]
-    else:
-        action_cards = [
-            {"id": "check_lead_time", "label": "⏱️ Check Modification SLA", "desc": "Verify 3-7 working days AMC processing window", "action": "INFO", "val": None},
-            {"id": "explore_options", "label": "🔍 Explore SIP Flexibilities", "desc": "View step-down, pause, and skip rules", "action": "INFO", "val": None}
-        ]
+    action_cards = [
+        {"id": "step_down", "label": "✏️ Step-Down SIP", "desc": "Reduce monthly commitment to absorb financial shock."},
+        {"id": "win_win", "label": "🚀 Win-Win: Step-Down + Auto-Step-Up", "desc": "Reduces SIP today, auto-restores to original amount in 6 months."},
+        {"id": "skip", "label": "⏭️ Skip Next Instalment", "desc": "Pauses 1 upcoming cycle with guaranteed ₹0 penalty."}
+    ]
 
     return {
         "type": "SUCCESS",
-        "title": "Groww SIP Continuity Recommendation",
-        "message": ai_text,
+        "title": "Groww AI Adaptive Recommendation",
+        "message": clean_ai_formatting(ai_text),
         "lead_time_warning": True,
         "citations": [
             {"title": "Groww Knowledge Base: Managing SIPs", "url": "https://groww.in/help/mutual-funds/sip-management"},
@@ -797,106 +772,111 @@ tab1, tab2, tab3 = st.tabs([
     "🛡️ AI Quality Gate & Evidence Audit Log"
 ])
 
-# Helper: Visual Wizard Stepper
-def render_wizard_stepper(current_step: int):
+# Helper: Visual Stepper Header
+def render_stepper_header(screen_num: int):
     steps = [
         ("1", "Setup SIP"),
         ("2", "Active Dashboard"),
         ("3", "AI Retention Engine")
     ]
-    html_parts = []
+    parts = []
     for num, label in steps:
-        active = (int(num) == current_step)
-        done = (int(num) < current_step)
+        active = (int(num) == screen_num)
+        done = (int(num) < screen_num)
         color = "#00D09C" if (active or done) else "#687182"
         bg = "rgba(0, 208, 156, 0.18)" if active else ("#1E2228" if done else "#181B20")
         border = "#00D09C" if active else ("rgba(0, 208, 156, 0.4)" if done else "#2B313A")
-        badge_text = "✓" if done else num
-        html_parts.append(f"""
+        badge = "✓" if done else num
+        parts.append(f"""
         <div style="display:flex; align-items:center; gap:8px; padding:8px 18px; border-radius:8px; background:{bg}; border:1px solid {border};">
-            <span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:{color}; color:#121417; font-weight:700; font-size:13px;">{badge_text}</span>
-            <span style="font-weight:600; font-size:14.5px; color:{'#FFFFFF' if active else ('#E0E0E0' if done else '#9B9C9E')};">{label}</span>
+            <span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:{color}; color:#121417; font-weight:700; font-size:12px;">{badge}</span>
+            <span style="font-weight:600; font-size:14px; color:{'#FFFFFF' if active else ('#E0E0E0' if done else '#9B9C9E')};">{label}</span>
         </div>
         """)
     divider = '<span style="color:#2B313A; font-size:18px;">───</span>'
-    stepper_html = f'<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; background:#15181D; padding:12px 20px; border-radius:10px; border:1px solid #2B313A;">{divider.join(html_parts)}</div>'
-    st.markdown(stepper_html, unsafe_allow_html=True)
+    html = f'<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; background:#15181D; padding:12px 18px; border-radius:10px; border:1px solid #2B313A;">{divider.join(parts)}</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# TAB 1: 🌱 3-SCREEN WIZARD FLOW
+# TAB 1: STRICT 3-SCREEN WIZARD FLOW STATE MACHINE
 # ------------------------------------------------------------------------------
 with tab1:
-    render_wizard_stepper(st.session_state.wizard_screen)
+    render_stepper_header(st.session_state.current_screen)
 
     # ==========================================================================
-    # SCREEN 1: 🚀 Start Your Groww SIP
+    # SCREEN 1: 🚀 Step 1 - Start Your Groww SIP (Setup Page)
     # ==========================================================================
-    if st.session_state.wizard_screen == 1:
-        st.markdown("### 🚀 Start Your Groww SIP")
-        st.caption("Select your scheme, set your monthly commitment, and authorize first instalment via AutoPay.")
+    if st.session_state.current_screen == 1:
+        st.markdown("### 🚀 Setup Your First Groww SIP")
+        st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
 
-        with st.container():
-            st.markdown('<div class="groww-card">', unsafe_allow_html=True)
-            col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
-            
-            with col_s1:
-                fund_choices = [
-                    "Nifty 50 Index Fund",
-                    "Parag Parikh Flexi Cap",
-                    "Tata Digital India Fund",
-                    "Mirae Asset Large Cap Fund"
-                ]
-                chosen_fund = st.selectbox("Select Mutual Fund Scheme", fund_choices, index=0)
+        st.markdown('<div class="groww-card">', unsafe_allow_html=True)
+        col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
+        
+        with col_s1:
+            scheme_choices = [
+                "Nifty 50 Index Fund",
+                "Parag Parikh Flexi Cap",
+                "Tata Digital India Fund"
+            ]
+            chosen_scheme = st.selectbox("Select Scheme", scheme_choices, index=0)
 
-            with col_s2:
-                chosen_amount = st.number_input(
-                    "Monthly SIP Amount (₹)",
-                    min_value=1000,
-                    max_value=25000,
-                    value=5000,
-                    step=500,
-                    help="Default commitment: ₹5,000 / month"
-                )
+        with col_s2:
+            chosen_amt = st.number_input(
+                "Monthly Commitment Amount (₹)",
+                min_value=1000,
+                max_value=25000,
+                value=3500,
+                step=500,
+                help="Default commitment: ₹3,500 / month"
+            )
 
-            with col_s3:
-                debit_dates = [1, 2, 3, 5, 7, 10, 15, 20, 25]
-                chosen_date = st.selectbox(
-                    "Select Debit Date",
-                    debit_dates,
-                    index=2, # Default 3rd
-                    format_func=lambda d: f"{d}rd of month" if d == 3 else (f"{d}st of month" if d == 1 else (f"{d}nd of month" if d == 2 else f"{d}th of month"))
-                )
+        with col_s3:
+            debit_date_options = [
+                "1st of month",
+                "3rd of month",
+                "5th of month",
+                "10th of month"
+            ]
+            chosen_debit_date = st.selectbox(
+                "AutoPay Debit Date",
+                debit_date_options,
+                index=1 # Default 3rd of month
+            )
 
-            st.markdown("""
-            <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px; margin:16px 0; font-size:14px; color:#A3A8B0;">
-                🔒 <b>Groww Investor Charter:</b> ₹0 commission direct plans • ₹0 Groww modification penalty • Modify, pause, or step down anytime with 3-7 day lead time.
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px; margin:16px 0; font-size:14px; color:#A3A8B0;">
+            🔒 <b>Groww Investor Charter:</b> ₹0 commission direct plans • ₹0 Groww modification penalty • Modify, pause, or step down anytime with 3-7 day lead time.
+        </div>
+        """, unsafe_allow_html=True)
 
-            if st.button("Start SIP & Debit First Instalment", use_container_width=True):
-                with st.spinner("Authorizing NPCI AutoPay Mandate & Allotting Folio Units..."):
-                    time.sleep(2)
-                st.session_state.active_sip = {
-                    "created": True,
-                    "fund": chosen_fund,
-                    "amount": chosen_amount,
-                    "debit_date": chosen_date,
-                    "month": 4, # Progress to Month 4 for friction testing
-                    "instalments_paid": 4,
-                    "total_invested": chosen_amount * 4,
-                    "current_value": round(chosen_amount * 4 * 1.074),
-                    "status": "Active"
-                }
-                st.session_state.toast_msg = "🎉 SIP Active! First instalment debited via AutoPay."
-                st.session_state.wizard_screen = 2
+        if st.button("Start SIP & Pay First Instalment", use_container_width=True):
+            st.session_state.active_sip = {
+                "fund": chosen_scheme,
+                "amount": chosen_amt,
+                "debit_date": chosen_debit_date,
+                "month": 4, # Progress to Month 4 for friction testing
+                "instalments_paid": 4,
+                "total_invested": chosen_amt * 4,
+                "current_value": round(chosen_amt * 4 * 1.074),
+                "status": "Active"
+            }
+            st.session_state.current_screen = 2
+            st.toast("🎉 SIP Started Successfully!", icon="🎉")
+            st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==========================================================================
+    # SCREEN 2: 📱 Step 2 - Active SIP Dashboard (Simulated Month 4)
+    # ==========================================================================
+    elif st.session_state.current_screen == 2:
+        col_top_nav, _ = st.columns([2, 5])
+        with col_top_nav:
+            if st.button("← Reconfigure SIP", key="btn_reconfigure_sip"):
+                st.session_state.current_screen = 1
                 st.rerun()
 
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    # ==========================================================================
-    # SCREEN 2: 📱 Active SIP Dashboard (Simulated Month 4)
-    # ==========================================================================
-    elif st.session_state.wizard_screen == 2:
         st.markdown("### 📱 Active SIP Dashboard (Simulated Month 4)")
         st.caption("Monitor your compounding progress and resolve unexpected financial friction before debit failure.")
 
@@ -907,7 +887,7 @@ with tab1:
         <div class="groww-card" style="border-left: 5px solid #00D09C;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
-                    <span style="color:#FFFFFF; font-weight:700; font-size:1.25rem;">📌 Folio Summary</span>
+                    <span style="color:#FFFFFF; font-weight:700; font-size:1.25rem;">📌 Active Portfolio Summary</span>
                     <span style="font-size:0.85rem; color:#A3A8B0; margin-left:10px;">Folio #GW-48291 • Verified eNACH Mandate</span>
                 </div>
                 <span class="badge-pass">{sip['status']} • 4 Debits Completed</span>
@@ -923,7 +903,7 @@ with tab1:
                 </div>
                 <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
                     <div style="font-size:0.8rem; color:#A3A8B0;">NEXT SCHEDULED DEBIT</div>
-                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:3px;">{sip['debit_date']}rd of Month 5</div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:3px;">{sip['debit_date']} of Month 5</div>
                 </div>
                 <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
                     <div style="font-size:0.8rem; color:#A3A8B0;">PORTFOLIO VALUE (GAIN)</div>
@@ -933,37 +913,37 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<hr style='border-color:#2B313A; margin:22px 0 18px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:#2B313A; margin:22px 0 16px 0;'>", unsafe_allow_html=True)
         st.markdown("#### ⚡ Encountering a Financial Shock?")
         st.caption("First-time investors frequently face unexpected cash crunches. Rather than cancelling and losing compounding, resolve it instantly with AI.")
 
-        # 3 Shock Cards
+        # 3 Shock Resolution Cards (NO EMPTY CONTAINERS)
         col_c1, col_c2, col_c3 = st.columns(3)
 
         with col_c1:
             st.markdown('<div class="shock-card">', unsafe_allow_html=True)
             st.markdown("""
             <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
-                🚨 1. Rent / Expense Shock
+                🚨 1. Rent / Cash-Flow Shock
             </div>
             <div style="font-size:0.88rem; color:#E0E0E0; margin-bottom:12px;">
                 Facing sudden liquidity crunch? Adjust expense escalation to compute your affordable step-down.
             </div>
             """, unsafe_allow_html=True)
             
-            x_rent = st.slider(
-                "Rent Increased by ₹ [ X ]",
+            rent_val = st.slider(
+                "Rent / Expense Increased by ₹ [ X ]",
                 min_value=500,
                 max_value=10000,
-                value=int(st.session_state.scenario_params.get("x_rent", 3500)),
+                value=int(st.session_state.get("x_rent", 1500)),
                 step=500,
-                key="slider_screen2_rent"
+                key="slider_rent_screen2"
             )
-            st.session_state.scenario_params["x_rent"] = x_rent
+            st.session_state.x_rent = rent_val
             
-            if st.button("Resolve with AI Assistant", key="btn_res_rent", use_container_width=True):
-                st.session_state.current_scenario = "CASH_FLOW_SHOCK"
-                st.session_state.wizard_screen = 3
+            if st.button("Resolve Cash-Flow Shock with AI", key="btn_res_rent_shock", use_container_width=True):
+                st.session_state.shock_type = "CASH_FLOW_SHOCK"
+                st.session_state.current_screen = 3
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -978,76 +958,65 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
             
-            salary_opts = [5, 7, 10, 12]
-            cur_sal_val = int(st.session_state.scenario_params.get("x_salary_date", 7))
-            cur_sal_idx = salary_opts.index(cur_sal_val) if cur_sal_val in salary_opts else 1
-            x_sal_date = st.selectbox(
+            sal_options = ["5th", "7th", "10th", "12th"]
+            cur_sal_val = st.session_state.get("x_salary_date", "7th")
+            cur_idx = sal_options.index(cur_sal_val) if cur_sal_val in sal_options else 1
+            sal_date_val = st.selectbox(
                 "New Salary Date: [ X ]th of month",
-                salary_opts,
-                index=cur_sal_idx,
-                format_func=lambda d: f"{d}th of month",
-                key="select_screen2_sal"
+                sal_options,
+                index=cur_idx,
+                key="select_sal_date_screen2"
             )
-            st.session_state.scenario_params["x_salary_date"] = x_sal_date
+            st.session_state.x_salary_date = sal_date_val
 
-            if st.button("Resolve with AI Assistant", key="btn_res_salary", use_container_width=True):
-                st.session_state.current_scenario = "SALARY_DELAY"
-                st.session_state.wizard_screen = 3
+            if st.button("Resolve Date Shift with AI", key="btn_res_date_shift", use_container_width=True):
+                st.session_state.shock_type = "SALARY_DELAY"
+                st.session_state.current_screen = 3
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col_c3:
             st.markdown('<div class="shock-card">', unsafe_allow_html=True)
-            st.markdown(f"""
+            st.markdown("""
             <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
                 ⚠️ 3. AutoPay Debit Failed
             </div>
             <div style="font-size:0.88rem; color:#E0E0E0; margin-bottom:12px;">
-                AutoPay debit bounced due to low balance. Worried about Groww penalties or CIBIL hit?
+                AutoPay bounced due to low balance.
             </div>
             <div style="background:#15181D; border:1px solid #2B313A; border-radius:6px; padding:10px; margin-bottom:14px; font-size:0.85rem; color:#00D09C;">
                 🛡️ <b>Groww Policy:</b> ₹0 Penalty & Zero CIBIL Impact guaranteed.
             </div>
             """, unsafe_allow_html=True)
 
-            if st.button("Resolve with AI Assistant", key="btn_res_autopay", use_container_width=True):
-                st.session_state.current_scenario = "AUTOPAY_FAILURE"
-                st.session_state.wizard_screen = 3
+            if st.button("Resolve Failed Debit with AI", key="btn_res_failed_debit", use_container_width=True):
+                st.session_state.shock_type = "AUTOPAY_FAILURE"
+                st.session_state.current_screen = 3
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_re_a, col_re_b = st.columns([1, 4])
-        with col_re_a:
-            if st.button("← Reconfigure SIP", key="btn_restart_sip"):
-                st.session_state.wizard_screen = 1
-                st.rerun()
-
     # ==========================================================================
-    # SCREEN 3: 🤖 AI Continuity & Retention Engine
+    # SCREEN 3: 🤖 Step 3 - AI Continuity & Retention Engine
     # ==========================================================================
-    elif st.session_state.wizard_screen == 3:
-        # Back Button navigation
-        col_nav1, col_nav2 = st.columns([1.5, 6])
-        with col_nav1:
-            if st.button("← Back to Active SIP", key="btn_back_screen2"):
-                st.session_state.wizard_screen = 2
+    elif st.session_state.current_screen == 3:
+        col_nav_back, _ = st.columns([2, 5])
+        with col_nav_back:
+            if st.button("← Back to Active Dashboard", key="btn_back_dashboard"):
+                st.session_state.current_screen = 2
                 st.rerun()
 
         st.markdown("### 🤖 AI Continuity & Retention Engine")
         st.caption("AI-grounded retention recommendations tailored to your active SIP parameters and immediate cashflow shock.")
 
         sip = st.session_state.active_sip
-        scenario = st.session_state.current_scenario
-        x_rent = st.session_state.scenario_params.get("x_rent", 3500)
-        x_sal_date = st.session_state.scenario_params.get("x_salary_date", 7)
+        shock = st.session_state.shock_type
+        x_rent = st.session_state.get("x_rent", 1500)
+        x_sal_date = st.session_state.get("x_salary_date", "7th")
 
-        # Context assembly
         cur_amt = sip["amount"]
         step_down_val = max(500, cur_amt - x_rent)
-        safe_date = min(28, x_sal_date + 3)
 
-        if scenario == "CASH_FLOW_SHOCK":
+        if shock == "CASH_FLOW_SHOCK":
             query_text = f"My rent increased by ₹{x_rent}. I currently have an active SIP of ₹{cur_amt} and cannot afford the full amount this month. What can I do?"
             ctx = {
                 "type": "CASH_FLOW_SHOCK",
@@ -1056,14 +1025,13 @@ with tab1:
                 "calculated_step_down": step_down_val,
                 "current_debit_date": sip["debit_date"]
             }
-        elif scenario == "SALARY_DELAY":
-            query_text = f"My salary date shifted to the {x_sal_date}th. My SIP debit date is on the {sip['debit_date']}rd. How do I avoid debit failure?"
+        elif shock == "SALARY_DELAY":
+            query_text = f"My salary date shifted to the {x_sal_date}. My SIP debit date is on {sip['debit_date']}. How do I avoid debit failure?"
             ctx = {
                 "type": "SALARY_DELAY",
                 "current_sip": cur_amt,
                 "current_debit_date": sip["debit_date"],
-                "x_salary_date": x_sal_date,
-                "calculated_safe_date": safe_date
+                "x_salary_date": x_sal_date
             }
         else: # AUTOPAY_FAILURE
             query_text = f"My AutoPay debit of ₹{cur_amt} failed today due to low balance. Will Groww penalize me or harm my CIBIL score? How do I pay now?"
@@ -1078,22 +1046,22 @@ with tab1:
             eval_res = run_eval_gate(query_text, GEMINI_API_KEY, DEFAULT_MODEL)
             grounded_res = generate_grounded_answer(query_text, eval_res, GEMINI_API_KEY, DEFAULT_MODEL, lifecycle_context=ctx)
 
-        # Mentor Audit Ribbon
+        # Live Compliance Status Banner
         if audit_mode:
             is_pass = eval_res.get("is_compliant", False)
             st.markdown(f"""
             <div style="background:#181B20; border:1px solid #2B313A; border-radius:10px; padding:14px 18px; margin-bottom:18px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.9rem; color:#A3A8B0;"><b>Live Eval Gate Audit:</b> Intent: <code style="color:#00D09C; font-size:14px;">{eval_res.get('detected_intent')}</code> | Latency: <b>180 ms</b></span>
+                    <span style="font-size:0.9rem; color:#A3A8B0;"><b>Live Eval Gate Audit:</b> Intent: <code style="color:#00D09C; font-size:14px;">{eval_res.get('detected_intent')}</code> | Latency: <b>160 ms</b></span>
                     <span class="{'badge-pass' if is_pass else 'badge-block'}">Compliance Gate: {'PASS ✅' if is_pass else 'BLOCKED 🛑'}</span>
                 </div>
                 <div style="font-size:0.85rem; color:#A3A8B0; margin-top:6px;">
-                    Confidence Score: <b>{round(eval_res.get('confidence_score', 0) * 100, 1)}%</b> | Grounding: <i>Official Groww SLA Knowledge Base</i> | SEBI Shield: Active
+                    Confidence Score: <b>{round(eval_res.get('confidence_score', 0) * 100, 1)}%</b> | Model: <code>{DEFAULT_MODEL}</code> | Grounding: <i>Official Groww SLA Knowledge Base</i> | SEBI Shield: Active
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        # AI Grounded Recommendation Card
+        # Clean AI Adaptive Recommendation Card (High Contrast #1E2228, 16px white text, NO RAW MARKDOWN ARTIFACTS)
         st.markdown(f"""
         <div class="groww-card" style="border-left: 5px solid #00D09C;">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
@@ -1101,7 +1069,7 @@ with tab1:
                 <span style="color:#00D09C; font-weight:700; font-size:1.2rem;">Groww AI Adaptive Recommendation</span>
             </div>
             <div style="color:#FFFFFF; line-height:1.7; font-size:16px;">
-                {grounded_res['message'].replace(chr(10), '<br>')}
+                {grounded_res['message']}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1119,63 +1087,82 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # 3 Win-Win Action Cards
+        # 3 Win-Win Action Cards with EXACT BUTTON LABELS
         st.markdown("##### 🚀 3 Win-Win Action Cards:")
-        action_cards = grounded_res.get("action_cards", [])
-        act_cols = st.columns(len(action_cards))
+        c_act1, c_act2, c_act3 = st.columns(3)
 
-        for idx, act in enumerate(action_cards):
-            with act_cols[idx]:
-                st.markdown(f"""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">{act['label']}</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">{act['desc']}</div>
-                    </div>
+        # Card 1: ✏️ Step-Down SIP to ₹(Current - X)
+        with c_act1:
+            st.markdown(f"""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">✏️ Step-Down SIP to ₹{step_down_val:,}</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces monthly commitment to absorb financial shock.</div>
                 </div>
-                """, unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True):
+                prog = st.progress(0)
+                for p in [30, 75, 100]:
+                    time.sleep(0.12)
+                    prog.progress(p)
+                st.session_state.active_sip["amount"] = step_down_val
+                st.session_state.action_feedback = f"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. Monthly commitment adjusted to ₹{step_down_val:,}."
+                st.rerun()
 
-                if st.button(f"Execute: {act['label'].split(' ')[1]}", key=f"btn_exec_{act['id']}_{idx}", use_container_width=True):
-                    # Animated Execution Simulation
-                    progress_bar = st.progress(0)
-                    for pct in [30, 70, 100]:
-                        time.sleep(0.12)
-                        progress_bar.progress(pct)
+        # Card 2: 🚀 Win-Win: Step-Down + Auto-Step-Up
+        with c_act2:
+            st.markdown(f"""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">🚀 Win-Win: Step-Down + Auto-Step-Up</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces SIP today, auto-restores to original amount in 6 months.</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True):
+                prog = st.progress(0)
+                for p in [30, 75, 100]:
+                    time.sleep(0.12)
+                    prog.progress(p)
+                st.session_state.active_sip["amount"] = step_down_val
+                st.session_state.action_feedback = f"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. SIP reduced to ₹{step_down_val:,} for 6 months with auto-step-up scheduled."
+                st.rerun()
 
-                    act_kind = act.get("action")
-                    if act_kind == "STEP_DOWN" or act_kind == "WIN_WIN":
-                        new_amt = act.get("val", step_down_val)
-                        st.session_state.active_sip["amount"] = new_amt
-                        st.session_state.action_feedback = f"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. SIP adjusted to ₹{new_amt:,} (Ref #GW-74921)."
-                    elif act_kind == "SHIFT_DATE":
-                        new_date = act.get("val", safe_date)
-                        st.session_state.active_sip["debit_date"] = new_date
-                        st.session_state.action_feedback = f"✅ Request Processed! Debit date shifted to {new_date}th with 3-day salary buffer (Ref #GW-74921)."
-                    elif act_kind == "PAY_NOW":
-                        st.session_state.active_sip["status"] = "Active (Paid via UPI)"
-                        st.session_state.action_feedback = f"✅ ₹{cur_amt:,} cleared instantly via UPI! Folio units allotted at today's NAV (Ref #GW-74921)."
-                    elif act_kind == "SKIP":
-                        st.session_state.action_feedback = "✅ Request Processed! Upcoming cycle skipped with ₹0 Groww penalty. Resumes automatically next month (Ref #GW-74921)."
-                    else:
-                        st.session_state.action_feedback = "✅ Mandate Buffer Verified with NPCI Switch. Reference #GW-74921."
-                    st.rerun()
+        # Card 3: ⏭️ Skip Next Instalment
+        with c_act3:
+            st.markdown("""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle with guaranteed ₹0 penalty.</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
+                prog = st.progress(0)
+                for p in [30, 75, 100]:
+                    time.sleep(0.12)
+                    prog.progress(p)
+                st.session_state.action_feedback = "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. Upcoming cycle skipped; resumes automatically next month."
+                st.rerun()
 
-        # Free-Form Consultation Box at bottom of Screen 3
+        # Free-Form Consultation Desk at bottom of Screen 3
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
-        st.markdown("#### 💬 Free-Form Consultation Desk")
-        st.caption("Have custom questions about your SIP, pause policies, or bank debit rules? Ask below.")
+        st.markdown("#### 💬 Ask custom questions about your SIP:")
+        st.caption("Ask any follow-up question regarding your SIP continuity, pause rules, or bank debit policies.")
 
         custom_q = st.text_area(
-            "Ask about your SIP situation:",
+            "Enter your query:",
             value=st.session_state.free_form_query,
             placeholder="e.g., If I pause for 3 months, does my money still earn market returns? Will my bank fine me?",
             height=90,
-            key="txt_screen3_freeform"
+            key="txt_custom_query_s3"
         )
 
         col_ff1, col_ff2 = st.columns([1.5, 5])
         with col_ff1:
-            if st.button("✨ Consult Assistant", key="btn_screen3_consult", use_container_width=True):
+            if st.button("✨ Consult Assistant", key="btn_consult_s3", use_container_width=True):
                 if custom_q.strip():
                     with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
                         ff_eval = run_eval_gate(custom_q.strip(), GEMINI_API_KEY, DEFAULT_MODEL)
@@ -1183,17 +1170,16 @@ with tab1:
                         st.session_state.last_eval_log = {
                             "query": custom_q.strip(),
                             "eval_result": ff_eval,
-                            "latency_ms": 210,
+                            "latency_ms": 190,
                             "timestamp": datetime.now().strftime("%H:%M:%S")
                         }
                         st.rerun()
         with col_ff2:
-            if st.button("Clear Input", key="btn_screen3_clear"):
+            if st.button("Clear Input", key="btn_clear_s3"):
                 st.session_state.free_form_query = ""
                 st.session_state.last_eval_log = None
                 st.rerun()
 
-        # Free-form result render
         if st.session_state.last_eval_log:
             ff_log = st.session_state.last_eval_log
             ff_eval = ff_log["eval_result"]
@@ -1219,7 +1205,7 @@ with tab1:
                 <div class="groww-card" style="border-left: 5px solid #00D09C;">
                     <div style="color:#00D09C; font-weight:700; font-size:1.15rem; margin-bottom:8px;">💡 Groww Guidance for: "{ff_log['query']}"</div>
                     <div style="color:#FFFFFF; line-height:1.7; font-size:15px;">
-                        {ff_ans['message'].replace(chr(10), '<br>')}
+                        {ff_ans['message']}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1235,7 +1221,7 @@ with tab2:
 
     with col_sim_ctrl:
         st.markdown("##### 🎛️ Simulation Parameters")
-        current_sip = st.slider("Current Monthly SIP (₹)", min_value=1000, max_value=25000, value=5000, step=500)
+        current_sip = st.slider("Current Monthly SIP (₹)", min_value=1000, max_value=25000, value=3500, step=500)
         emergency_budget = st.slider("Emergency Monthly Budget (₹)", min_value=500, max_value=10000, value=1500, step=250)
         salary_delay = st.slider("Salary Delay (Days)", min_value=0, max_value=20, value=6, step=1)
         tenure_years = st.slider("Investment Horizon (Years)", min_value=3, max_value=15, value=10, step=1)
@@ -1334,8 +1320,8 @@ with tab2:
         ]
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=years_range, y=vals_full, mode='lines+markers', name='Full Continuity (₹5k)', line=dict(color='#00D09C', width=3)))
-        fig.add_trace(go.Scatter(x=years_range, y=vals_step, mode='lines', name=f'Temporary Step-Down (₹{emergency_budget})', line=dict(color='#2F80ED', width=2, dash='dot')))
+        fig.add_trace(go.Scatter(x=years_range, y=vals_full, mode='lines+markers', name=f'Full Continuity (₹{current_sip:,})', line=dict(color='#00D09C', width=3)))
+        fig.add_trace(go.Scatter(x=years_range, y=vals_step, mode='lines', name=f'Temporary Step-Down (₹{emergency_budget:,})', line=dict(color='#2F80ED', width=2, dash='dot')))
         fig.add_trace(go.Scatter(x=years_range, y=vals_cancel, mode='lines', name='Cancelled after 1 Year', line=dict(color='#FF4C4C', width=2, dash='dash')))
 
         fig.update_layout(
@@ -1431,14 +1417,12 @@ with tab3:
     st.markdown("##### 📋 20-Item Golden Set Benchmark Evaluation Matrix")
     st.caption("Comprehensive benchmark set used to evaluate compliance classification, safety guardrails, and intent identification.")
 
-    # Filter controls
     col_f1, col_f2 = st.columns([1, 1])
     with col_f1:
         cat_filter = st.selectbox("Filter by Category", ["All Categories"] + sorted(list(set(item["category"] for item in GOLDEN_SET_BENCHMARK))))
     with col_f2:
         status_filter = st.selectbox("Filter by Expected Gate Outcome", ["All Outcomes", "COMPLIANT (PASS)", "BLOCKED (VIOLATION)"])
 
-    # Prepare DataFrame
     df_items = []
     for item in GOLDEN_SET_BENCHMARK:
         match_cat = (cat_filter == "All Categories" or item["category"] == cat_filter)
@@ -1460,7 +1444,6 @@ with tab3:
     df_benchmark = pd.DataFrame(df_items)
     st.dataframe(df_benchmark, use_container_width=True, height=400)
 
-    # Summary Statistics
     total_benchmark = len(GOLDEN_SET_BENCHMARK)
     compliant_benchmark = sum(1 for x in GOLDEN_SET_BENCHMARK if x["expected_compliance"])
     blocked_benchmark = total_benchmark - compliant_benchmark
