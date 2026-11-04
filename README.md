@@ -98,16 +98,26 @@ The application strictly reflects Groww’s signature dark-mode design system:
 ## 📱 Multi-Tab UI Structure
 
 ### Tab 1: 🌱 SIP Continuity Assistant (Primary Flow)
-- **Quick Scenario Triggers:**
-  - 📉 *"Can't afford ₹5,000 SIP this month"*
-  - 📅 *"Salary date changed from 1st to 7th"*
-  - ⚠️ *"AutoPay debit failed - Will I be penalized?"*
-  - ⏸️ *"Is my invested money safe if I pause?"*
-- **Generative UI Output:**
-  - Grounded conversational recommendation.
-  - **Dynamic Action Cards** (e.g., `[✏️ Apply ₹1k Step-Down]`, `[📆 Shift Date to 10th]`, `[⏭️ Skip Next Instalment]`, `[⚡ Pay Failed Debit Now]`) with simulated one-click action execution.
-  - **Lead-Time Warning Banners** styled with `#F2994A` accent border.
-  - Official source citations (Groww Help Desk & AMFI).
+- **Step 1 — Fund Setup & Payment Simulation:**
+  - Mock fund picker (*Nifty 50 Index Fund*, *Parag Parikh Flexi Cap*, *Tata Digital India Fund*, *Mirae Asset Large Cap Fund*).
+  - Monthly SIP Amount (Default: ₹5,000) & AutoPay Debit Date picker (e.g., 3rd of month).
+  - `🚀 Start SIP & Pay` button with 2-second Groww-green spinner and success confirmation: *"🎉 SIP Created! First instalment debited via AutoPay."*
+- **Step 2 — Dynamic Life-Event Friction Controls:**
+  - **Active SIP Card (Simulated Month 4)** displaying folio details, 4 debits completed, total invested ₹20,000, and NAV compounding appreciation (₹21,480).
+  - Dynamic Affordability Slider: *"Rent/Expense Increased by ₹ [ X ]"* (Default: ₹3,500).
+  - Dynamic Salary Date Select: *"New Salary Date: [ X ]th of month"* (5th, 7th, 10th, 12th).
+  - 3 Real-Time Life-Event Shock Triggers:
+    * 🚨 `Trigger Cash Flow Shock (Rent +₹X)`
+    * 📅 `Trigger Salary Delay (Shifted to Xth)`
+    * ⚠️ `Trigger AutoPay Failure (Low Balance)`
+- **Step 3 — AI Reasoning & Dynamic UI Generation:**
+  - **For Rent +₹X:** AI computes remaining affordable budget `(Current SIP - X, min ₹500)` and renders action card: `[✏️ Step-Down SIP to ₹(Current - X)]` + `[⏭️ Skip Next Instalment]`.
+  - **For Salary Shift to Xth:** AI calculates the 3-day buffer `(X + 3 days)` against Groww lead-time rules and renders: `[📆 Shift Debit Date to (X + 3)th]` + NPCI & AMC 3-7 day lead-time warning banner.
+  - **For AutoPay Failure:** AI explains ₹0 Groww penalties, bank bounce caution, zero CIBIL impact, and renders: `[⚡ Pay Failed Debit Now]`.
+  - Clicking any action updates the active SIP card and displays immediate confirmation feedback!
+- **Free-Form Investor Guidance Desk:**
+  - 4 Quick Scenario Triggers (Affordability, Date Mismatch, AutoPay failure, Pause safety).
+  - Natural Language Query input box with Grounded AI response and source citations.
 
 ### Tab 2: 📊 Dynamic Flexibility & Continuity Simulator
 - **Interactive Controls:**
