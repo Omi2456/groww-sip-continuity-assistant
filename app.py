@@ -473,7 +473,7 @@ with st.sidebar:
     st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
     
     if GEMINI_API_KEY:
-        st.markdown('<span class="badge-pass">🟢 Live Gemini AI Active</span>', unsafe_allow_html=True)
+        st.markdown('<span class="badge-pass">🟢 </span>', unsafe_allow_html=True)
     else:
         st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local Grounded Engine Active</span>', unsafe_allow_html=True)
 
