@@ -47,7 +47,13 @@ if not GEMINI_API_KEY:
     except Exception:
         pass
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+# DEFAULT_MODEL = "gemini-2.5-flash"
+# UPDATED CODE:
+# DEFAULT_MODEL = "gemini-1.5-flash"
+# To this:
+# DEFAULT_MODEL = "gemini-2.0-flash"
+# UPDATED CODE:
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 # ==============================================================================
 # 1. ACCESSIBILITY, CONTRAST & TYPOGRAPHY DESIGN SYSTEM (CUSTOM CSS)
@@ -1349,6 +1355,13 @@ with tab1:
                     with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
                         ff_eval = run_eval_gate(custom_q.strip(), GEMINI_API_KEY, DEFAULT_MODEL)
                         ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GEMINI_API_KEY, DEFAULT_MODEL)
+                        
+                        # Store Gemini live response into session state
+                        if isinstance(ff_res, dict):
+                            st.session_state.ff_res = ff_res.get("message", "")
+                        else:
+                            st.session_state.ff_res = str(ff_res)
+
                         st.session_state.last_eval_log = {
                             "query": custom_q.strip(),
                             "eval_result": ff_eval,
@@ -1360,6 +1373,7 @@ with tab1:
             if st.button("Clear Input", key="btn_clear_s3"):
                 st.session_state.free_form_query = ""
                 st.session_state.last_eval_log = None
+                st.session_state.ff_res = None
                 st.rerun()
 
         if st.session_state.last_eval_log:
@@ -1383,16 +1397,19 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             else:
+                # Priority: Render live Gemini AI response if available; otherwise fall back to static grounded text
+                display_output = st.session_state.get("ff_res") if st.session_state.get("ff_res") else ff_ans['message']
+
                 st.markdown(f"""
                 <div class="groww-card" style="border-left: 5px solid #00D09C;">
                     <div style="color:#00D09C; font-weight:700; font-size:1.15rem; margin-bottom:8px;">💡 Groww Guidance for: "{ff_log['query']}"</div>
                     <div style="color:#FFFFFF; line-height:1.7; font-size:15px;">
-                        {ff_ans['message']}
+                        {display_output}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-
-# ------------------------------------------------------------------------------
+                
+                # ------------------------------------------------------------------------------
 # TAB 2: 📊 Dynamic Flexibility & Continuity Simulator
 # ------------------------------------------------------------------------------
 with tab2:
