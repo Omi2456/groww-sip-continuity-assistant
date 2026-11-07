@@ -629,7 +629,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             ]
         if ctx:
             context_lines.extend([
-                f"Scenario: {ctx.get('type', 'Not specified')}",
+                f"Selected situations: {', '.join(ctx.get('selected_scenarios', [])) or ctx.get('type', 'Not specified')}",
                 f"Expense increase: ₹{ctx.get('x_rent', 0)}",
                 f"Salary date: {ctx.get('x_salary_date', 'Not specified')}",
                 f"Illustrative affordable contribution: ₹{ctx.get('calculated_step_down', 'Not calculated')}"
@@ -713,9 +713,9 @@ if st.session_state.action_feedback:
 # 5. MULTI-TAB STRUCTURE
 # ==============================================================================
 tab1, tab2, tab3 = st.tabs([
-    "🌱 SIP Continuity Assistant",
-    "📊 Dynamic Flexibility & Simulator",
-    "🛡️ AI Quality Gate & Evidence Audit Log"
+    "🌱 SIP Assistant",
+    "📊 Simulator",
+    "🛡️ AI Audit"
 ])
 
 # Helper: Visual Stepper Header
@@ -869,6 +869,7 @@ with tab1:
         div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
           border-bottom:2px solid #00C896; color:#00C896; animation:softGlow 3s ease-in-out infinite;
         }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] { animation:softGlow 3s ease-in-out infinite; }
         </style>
         """, unsafe_allow_html=True)
 
