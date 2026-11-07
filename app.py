@@ -1061,7 +1061,7 @@ with tab1:
                 st.rerun()
 
         st.markdown("### 🤖 AI Continuity & Retention Engine")
-        st.caption("AI-grounded retention recommendations tailored to your active SIP parameters and immediate cashflow shock.")
+        st.caption("AI-assisted educational guidance tailored to this simulated SIP scenario; no real account is connected.")
 
         sip = st.session_state.active_sip
         shock = st.session_state.shock_type
@@ -1348,7 +1348,8 @@ with tab1:
                 """, unsafe_allow_html=True)
             else:
                 # Priority: Render live Groq AI response if available; otherwise fall back to static grounded text
-                display_output = st.session_state.get("ff_res") if st.session_state.get("ff_res") else ff_ans['message']
+                stored_response = st.session_state.get("ff_res")
+                display_output = stored_response.get("message", ff_ans["message"]) if isinstance(stored_response, dict) else (stored_response or ff_ans["message"])
 
                 st.markdown(f"""
                 <div class="groww-card" style="border-left: 5px solid #00D09C;">
@@ -1363,8 +1364,8 @@ with tab1:
 # TAB 2: 📊 Dynamic Flexibility & Continuity Simulator
 # ------------------------------------------------------------------------------
 with tab2:
-    st.markdown("### 📊 SIP Flexibility & Compounding Protection Simulator")
-    st.caption("Quantifying the true cost of cancellation vs. the superpower of temporary flexibility (Step-Down & Skip).")
+    st.markdown("### 📊 SIP Flexibility & Illustrative Projection Simulator")
+    st.caption("Illustrative scenario comparison only; actual mutual-fund returns are market-linked and not predictable.")
 
     col_sim_ctrl, col_sim_view = st.columns([1, 2])
 
@@ -1374,7 +1375,7 @@ with tab2:
         emergency_budget = st.slider("Emergency Monthly Budget (₹)", min_value=500, max_value=10000, value=1500, step=250)
         salary_delay = st.slider("Salary Delay (Days)", min_value=0, max_value=20, value=6, step=1)
         tenure_years = st.slider("Investment Horizon (Years)", min_value=3, max_value=15, value=10, step=1)
-        expected_cagr = st.slider("Expected Market Return (CAGR %)", min_value=8, max_value=16, value=12, step=1)
+        expected_cagr = st.slider("Illustrative Assumed Return (CAGR %)", min_value=8, max_value=16, value=12, step=1)
 
         st.markdown("<hr style='border-color:#2B313A; margin:16px 0;'>", unsafe_allow_html=True)
         st.markdown("##### 💡 Tailored Recommendation:")
@@ -1403,7 +1404,11 @@ with tab2:
     # 3. Step-Down (3 Months at emergency budget, rest at full)
     step_down_months = 3
     invested_step_down = (emergency_budget * step_down_months) + (current_sip * (total_months - step_down_months))
-    wealth_step_down = wealth_full - (calculate_sip_wealth(current_sip - emergency_budget, total_months, r_monthly) - calculate_sip_wealth(current_sip - emergency_budget, total_months - step_down_months, r_monthly))
+    wealth_step_down = (
+        calculate_sip_wealth(emergency_budget, step_down_months, r_monthly)
+        * ((1 + r_monthly) ** (total_months - step_down_months))
+        + calculate_sip_wealth(current_sip, total_months - step_down_months, r_monthly)
+    )
 
     # 4. Outright Cancellation
     invested_months_cancel = 12
@@ -1411,7 +1416,7 @@ with tab2:
     wealth_cancel = calculate_sip_wealth(current_sip, invested_months_cancel, r_monthly) * ((1 + r_monthly) ** (total_months - invested_months_cancel))
 
     with col_sim_view:
-        st.markdown("##### 📈 10-Year Compounding Comparison Matrix")
+        st.markdown(f"##### 📈 {tenure_years}-Year Illustrative Compounding Comparison")
         
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         with m_c1:
@@ -1459,8 +1464,11 @@ with tab2:
 
         vals_full = [calculate_sip_wealth(current_sip, m, r_monthly) / 100000 for m in months_range]
         vals_step = [
-            (calculate_sip_wealth(current_sip, m, r_monthly) - 
-             (calculate_sip_wealth(current_sip - emergency_budget, m, r_monthly) if m >= 3 else 0)) / 100000 
+            (
+                calculate_sip_wealth(emergency_budget, min(m, step_down_months), r_monthly)
+                * ((1 + r_monthly) ** max(0, m - step_down_months))
+                + (calculate_sip_wealth(current_sip, max(0, m - step_down_months), r_monthly) if m > step_down_months else 0)
+            ) / 100000
             for m in months_range
         ]
         vals_cancel = [
