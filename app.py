@@ -906,6 +906,7 @@ with tab1:
             st.caption("Basis: 4 instalments × monthly SIP amount, plus an assumed 7.4% illustrative uplift. Not live NAV, actual fund performance or a return forecast.")
 
         if selected_scenarios and st.button("Continue to Step 3: AI Retention Engine →", type="primary", use_container_width=True, key="btn_continue_retention"):
+            st.session_state.scenario_answer = None
             st.session_state.current_screen = 3
             st.rerun()
 
@@ -1017,22 +1018,22 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
                     handle_action_execution(
-                        "Your selected option has been applied to the prototype SIP plan.",
-                        "✅ Request Processed! Upcoming cycle skipped subject to applicable platform, AMC and bank terms. Resumes automatically next month."
+                        "Upcoming instalment marked as skipped in your prototype plan.",
+                        "The upcoming instalment is marked as skipped in your prototype plan. Check the applicable provider rules before relying on a real change."
                     )
             with col_e2:
                 st.markdown("""
                 <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
                     <div>
                         <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏸️ 3-Month Emergency Pause</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Suspends debits for 3 months while income recovers. Zero penalty, existing units generally remain invested unless redeemed; market value can rise or fall.</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Illustrates a temporary three-month break while income recovers. Existing units remain invested unless redeemed; market value can rise or fall.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
                     handle_action_execution(
-                        "Your selected option has been applied to the prototype SIP plan.",
-                        "✅ Request Processed! 3-Month Emergency Pause activated. Folio existing units remain exposed to market movements."
+                        "Three-month pause displayed in your prototype plan.",
+                        "Your prototype plan now shows a three-month pause. Existing units remain exposed to market movements; real availability depends on provider rules."
                     )
 
         else:
@@ -1052,7 +1053,7 @@ with tab1:
                     def update_step_down():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "Your selected option has been applied to the prototype SIP plan.",
+                        f"Monthly SIP adjusted to ₹{step_down_val:,}.",
                         f"Your prototype monthly SIP amount is now ₹{step_down_val:,}.",
                         update_step_down
                     )
@@ -1070,7 +1071,7 @@ with tab1:
                     def update_win_win():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "Your selected option has been applied to the prototype SIP plan.",
+                        f"Step-down plan set to ₹{step_down_val:,} with a proposed 6-month step-up.",
                         f"Your prototype SIP is set to ₹{step_down_val:,}; a return to the original amount is shown as a proposed 6-month step-up.",
                         update_win_win
                     )
@@ -1086,7 +1087,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
                     handle_action_execution(
-                        "Your selected option has been applied to the prototype SIP plan.",
+                        "Upcoming instalment marked as skipped.",
                         "The upcoming instalment is marked as skipped in your prototype plan."
                     )
 
