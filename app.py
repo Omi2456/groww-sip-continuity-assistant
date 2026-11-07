@@ -575,26 +575,6 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             "action_cards": []
         }
 
-    # Keep portfolio summaries deterministic and grounded in the simulated SIP state.
-    if intent == "SIP_SUMMARY":
-        sip = ctx.get("portfolio") or ctx
-        if sip:
-            amount = int(sip.get("amount", 0))
-            invested = int(sip.get("total_invested", 0))
-            value = int(sip.get("current_value", invested))
-            gain = value - invested
-            message = (
-                f"**Scheme:** {sip.get('fund', 'Not set')}\n\n"
-                f"**Monthly SIP:** ₹{amount:,}\n\n"
-                f"**Instalments completed:** {sip.get('instalments_paid', 'Not available')}\n\n"
-                f"**Total invested:** ₹{invested:,}\n\n"
-                f"**Illustrative current value:** ₹{value:,}\n\n"
-                f"**Illustrative change:** {'+' if gain >= 0 else ''}₹{gain:,}\n\n"
-                f"**Next debit:** {sip.get('debit_date', 'Not set')}\n\n"
-                "These are simulated prototype values, not live Groww holdings or NAV data."
-            )
-            return {"type": "SUCCESS", "title": "Your SIP summary", "message": message, "citations": [], "action_cards": []}
-
     # A summary is deterministic: it must use the simulated account, not ask an LLM to invent account data.
     if intent == "SIP_SUMMARY":
         sip = ctx.get("portfolio") or ctx
