@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from openai import OpenAI
 
-from knowledge_basefrom knowledge_base import (
+from knowledge_base import (
     GROWW_SIP_KNOWLEDGE_BASE,
     GOLDEN_SET_BENCHMARK,
     INTENT_DEFINITIONS
@@ -694,7 +694,7 @@ Rules:
                 f"A failed debit does not itself redeem previously allotted units. Their value remains subject to market movements.\n\n"
                 f"• Charges: Your bank or payment provider may apply charges under its account terms. Check the applicable schedule of charges.\n"
                 f"• Zero CIBIL Impact: Mutual fund SIPs are investments, not loan repayments. A failed debit has zero impact on your CIBIL score.\n"
-                f"• Bank Caution: Your bank may charge an ECS bounce charge (~₹250–₹500) for insufficient funds.\n"
+                f"• Bank Caution: Your bank may apply a failed-debit charge under its account terms; check its schedule of charges.\n"
                 f"• Instant Recovery: Clear your ₹{c_sip:,} instalment immediately via UPI to ensure continuous unit allotment."
             )
 
@@ -748,7 +748,7 @@ Rules:
                 "• Zero Penalty from Groww: Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
                 "• Zero CIBIL Impact: Investment SIPs are not loans or credit cards. A failed debit has zero impact on your CIBIL score.\n"
                 "• Bank Caution: Your bank may apply a failed-debit charge under its account terms.\n"
-                "• Instant Recovery: You can immediately pay this instalment using the Pay Now button via UPI."
+                "• Instant Recovery: Check the app or payment provider for currently available recovery options."
             )
         elif intent == "PAUSE_RECOVERY":
             ai_text = (
@@ -773,7 +773,7 @@ Rules:
 
     return {
         "type": "SUCCESS",
-        "title": "Groww AI Adaptive Recommendation",
+        "title": "Groww AI-assisted SIP Guidance",
         "message": clean_ai_formatting(ai_text),
         "lead_time_warning": True,
         "citations": [
@@ -1123,12 +1123,12 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
 
-        # Clean AI Adaptive Recommendation Card (High Contrast #1E2228, 16px white text, NO RAW MARKDOWN ARTIFACTS)
+        # Clean AI-assisted SIP Guidance Card (High Contrast #1E2228, 16px white text, NO RAW MARKDOWN ARTIFACTS)
         st.markdown(f"""
         <div class="groww-card" style="border-left: 5px solid #00D09C;">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
                 <span style="font-size:1.3rem;">💡</span>
-                <span style="color:#00D09C; font-weight:700; font-size:1.2rem;">Groww AI Adaptive Recommendation</span>
+                <span style="color:#00D09C; font-weight:700; font-size:1.2rem;">Groww AI-assisted SIP Guidance</span>
             </div>
             <div style="color:#FFFFFF; line-height:1.7; font-size:16px;">
                 {grounded_res['message']}
@@ -1206,7 +1206,7 @@ with tab1:
                 <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
                     <div>
                         <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses current cycle with guaranteed ₹0 Groww penalty to absorb cash crunch.</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Illustrates a one-cycle pause; actual availability and charges depend on provider terms.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1353,7 +1353,7 @@ with tab1:
 
                 st.markdown(f"""
                 <div class="groww-card" style="border-left: 5px solid #00D09C;">
-                    <div style="color:#00D09C; font-weight:700; font-size:1.15rem; margin-bottom:8px;">💡 Groww Guidance for: "{ff_log['query']}"</div>
+                    <div style="color:#00D09C; font-weight:700; font-size:1.15rem; margin-bottom:8px;">💡 Prototype guidance for: "{ff_log['query']}"</div>
                     <div style="color:#FFFFFF; line-height:1.7; font-size:15px;">
                         {display_output}
                     </div>
@@ -1498,9 +1498,9 @@ with tab2:
         <div class="groww-card">
             <div style="font-weight:700; color:#00D09C; font-size:16px; margin-bottom:8px;">🧠 Why First-Time Investors Drop Out (And How Flexibility Solves It):</div>
             <div style="font-size:15px; color:#FFFFFF; line-height:1.7;">
-                • <b>Compounding Preservation:</b> Stepping down to your emergency budget preserves <b>>98% of your long-term compounding gains</b>, while avoiding the psychological barrier of restarting.<br>
-                • <b>Unit Safety in Pause:</b> When you pause a SIP on Groww, your already accumulated mutual fund units stay invested in the market, continuing to compound with NAV appreciation.<br>
-                • <b>₹0 Groww Penalty:</b> Groww never penalizes pauses, skips, or modifications, protecting your capital for when cashflow stabilizes.
+                • <b>Contribution Flexibility:</b> A temporarily smaller contribution may be easier to manage than stopping entirely, depending on scheme and platform rules.<br>
+                • <b>Existing Units:</b> Stopping future instalments does not itself redeem already allotted units; their value remains subject to market movements.<br>
+                • <b>Charges:</b> Check current platform, AMC and bank terms before changing or missing an instalment.
             </div>
         </div>
         """, unsafe_allow_html=True)
