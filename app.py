@@ -575,6 +575,26 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             "action_cards": []
         }
 
+    # Keep portfolio summaries deterministic and grounded in the simulated SIP state.
+    if intent == "SIP_SUMMARY":
+        sip = ctx.get("portfolio") or ctx
+        if sip:
+            amount = int(sip.get("amount", 0))
+            invested = int(sip.get("total_invested", 0))
+            value = int(sip.get("current_value", invested))
+            gain = value - invested
+            message = (
+                f"**Scheme:** {sip.get('fund', 'Not set')}\n\n"
+                f"**Monthly SIP:** ₹{amount:,}\n\n"
+                f"**Instalments completed:** {sip.get('instalments_paid', 'Not available')}\n\n"
+                f"**Total invested:** ₹{invested:,}\n\n"
+                f"**Illustrative current value:** ₹{value:,}\n\n"
+                f"**Illustrative change:** {'+' if gain >= 0 else ''}₹{gain:,}\n\n"
+                f"**Next debit:** {sip.get('debit_date', 'Not set')}\n\n"
+                "These are simulated prototype values, not live Groww holdings or NAV data."
+            )
+            return {"type": "SUCCESS", "title": "Your SIP summary", "message": message, "citations": [], "action_cards": []}
+
     # A summary is deterministic: it must use the simulated account, not ask an LLM to invent account data.
     if intent == "SIP_SUMMARY":
         sip = ctx.get("portfolio") or ctx
@@ -913,11 +933,6 @@ with tab1:
             else:
                 st.info("Select at least one situation to continue.")
 
-            if selected_scenarios and st.button("Continue to Step 3: AI Retention Engine →", type="primary", use_container_width=True, key="btn_continue_retention"):
-                st.session_state.scenario_answer = None
-                st.session_state.current_screen = 3
-                st.rerun()
-
 
         # Retention-first nudge: show the contribution gap without encouraging cancellation.
         st.markdown(f"""
@@ -951,6 +966,11 @@ with tab1:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        if selected_scenarios and st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_continue_retention"):
+            st.session_state.scenario_answer = None
+            st.session_state.current_screen = 3
+            st.rerun()
 
     # ==========================================================================
     # SCREEN 3: AI Retention Engine — action plan, simulator choices and audit
@@ -997,7 +1017,7 @@ with tab1:
                     st.caption("Guidance is based on your selected situations and the prototype knowledge base.")
 
         # Dynamic Action Execution Handler
-        def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None):
+        def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None, action_key=None):
             prog = st.progress(0)
             for p in [30, 75, 100]:
                 time.sleep(0.12)
@@ -1006,99 +1026,99 @@ with tab1:
             if update_sip_fn:
                 update_sip_fn()
             st.session_state.action_feedback = feedback_msg
+            st.session_state.last_retention_action = action_key
+            st.session_state.retention_reminder = None
             st.session_state.pipeline_active = True
             st.rerun()
 
-        # Action Cards Section with Edge-Case Defenses
+        # The same three retention choices are always available, regardless of selected scenario.
         st.markdown("##### Explore a next step")
+        c_act1, c_act2, c_act3 = st.columns(3)
 
-        # EDGE CASE 1: Low-SIP Threshold Rule (SIP <= 1000)
-        # EDGE CASE 2: Severe Cash Crunch (Expense Shock >= Active SIP)
-        if (shock == "CASH_FLOW_SHOCK" and is_low_sip) or (shock == "CASH_FLOW_SHOCK" and is_severe_crunch):
-            col_e1, col_e2 = st.columns(2)
-            with col_e1:
-                st.markdown("""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Illustrates a one-cycle pause; actual availability and charges depend on provider terms.</div>
-                    </div>
+        with c_act1:
+            st.markdown(f"""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">✏️ Step-Down SIP to ₹{step_down_val:,}</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces monthly commitment to absorb financial shock.</div>
                 </div>
-                """, unsafe_allow_html=True)
-                if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
-                    handle_action_execution(
-                        "Upcoming instalment marked as skipped in your prototype plan.",
-                        "The upcoming instalment is marked as skipped in your prototype plan. Check the applicable provider rules before relying on a real change."
-                    )
-            with col_e2:
-                st.markdown("""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏸️ 3-Month Emergency Pause</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Illustrates a temporary three-month break while income recovers. Existing units remain invested unless redeemed; market value can rise or fall.</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
-                    handle_action_execution(
-                        "Three-month pause displayed in your prototype plan.",
-                        "Your prototype plan now shows a three-month pause. Existing units remain exposed to market movements; real availability depends on provider rules."
-                    )
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True):
+                def update_step_down():
+                    st.session_state.active_sip["amount"] = step_down_val
+                handle_action_execution(
+                    f"Step-Down selected: monthly SIP adjusted to ₹{step_down_val:,} in the prototype.",
+                    f"Your prototype monthly SIP amount is now ₹{step_down_val:,}.",
+                    update_step_down,
+                    action_key="step_down"
+                )
 
-        else:
-            # Normal Flow: 3 Action Cards with EXACT BUTTON LABELS
-            c_act1, c_act2, c_act3 = st.columns(3)
-
-            with c_act1:
-                st.markdown(f"""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">✏️ Step-Down SIP to ₹{step_down_val:,}</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces monthly commitment to absorb financial shock.</div>
-                    </div>
+        with c_act2:
+            st.markdown("""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">🚀 Win-Win: Step-Down + Auto-Step-Up</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces SIP today, auto-restores to original amount in 6 months.</div>
                 </div>
-                """, unsafe_allow_html=True)
-                if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True):
-                    def update_step_down():
-                        st.session_state.active_sip["amount"] = step_down_val
-                    handle_action_execution(
-                        f"Monthly SIP adjusted to ₹{step_down_val:,}.",
-                        f"Your prototype monthly SIP amount is now ₹{step_down_val:,}.",
-                        update_step_down
-                    )
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True):
+                original_amount = int(sip["amount"])
+                def update_win_win():
+                    st.session_state.active_sip["amount"] = step_down_val
+                    st.session_state["proposed_step_up"] = {
+                        "original_amount": original_amount,
+                        "review_month": 6,
+                        "status": "Proposed prototype plan"
+                    }
+                handle_action_execution(
+                    f"Win-Win plan selected: SIP reduced to ₹{step_down_val:,}; a 6-month step-up review is recorded.",
+                    f"Your prototype SIP is set to ₹{step_down_val:,}. A proposed review to restore ₹{original_amount:,} is recorded for month 6.",
+                    update_win_win,
+                    action_key="win_win"
+                )
 
-            with c_act2:
-                st.markdown(f"""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">🚀 Win-Win: Step-Down + Auto-Step-Up</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces SIP today, auto-restores to original amount in 6 months.</div>
-                    </div>
+        with c_act3:
+            st.markdown("""
+            <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
+                    <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle, subject to applicable platform, AMC and bank terms.</div>
                 </div>
-                """, unsafe_allow_html=True)
-                if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True):
-                    def update_win_win():
-                        st.session_state.active_sip["amount"] = step_down_val
-                    handle_action_execution(
-                        f"Step-down plan set to ₹{step_down_val:,} with a proposed 6-month step-up.",
-                        f"Your prototype SIP is set to ₹{step_down_val:,}; a return to the original amount is shown as a proposed 6-month step-up.",
-                        update_win_win
-                    )
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
+                handle_action_execution(
+                    "Skip option selected: the next instalment is marked as skipped in the prototype plan.",
+                    "The next instalment is marked as skipped in your prototype plan.",
+                    action_key="skip"
+                )
 
-            with c_act3:
-                st.markdown("""
-                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle with subject to applicable platform, AMC and bank terms.</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
-                    handle_action_execution(
-                        "Upcoming instalment marked as skipped.",
-                        "The upcoming instalment is marked as skipped in your prototype plan."
-                    )
+        # A relevant follow-up reminder is offered only after an action is selected.
+        last_action = st.session_state.get("last_retention_action")
+        if last_action:
+            reminder_labels = {
+                "step_down": "Set Reminder — Month 5 Step-Down Review",
+                "win_win": "Set Reminder — Month 5 Step-Up Check",
+                "skip": "Set Reminder — Next Instalment Follow-Up"
+            }
+            reminder_details = {
+                "step_down": "Review whether the reduced SIP amount is still affordable in month 5.",
+                "win_win": "Review the reduced SIP in month 5, before the proposed month-6 step-up.",
+                "skip": "Review cash flow and SIP continuity before the next scheduled instalment."
+            }
+            st.markdown("##### 🔔 Follow-up reminder")
+            st.caption(reminder_details.get(last_action, "Review your SIP continuity plan."))
+            if st.button(reminder_labels.get(last_action, "Set Follow-up Reminder"), key="btn_set_action_reminder"):
+                st.session_state["retention_reminder"] = {
+                    "action": last_action,
+                    "message": reminder_details.get(last_action),
+                    "status": "Added to this prototype session"
+                }
+                st.toast("Follow-up reminder added to your prototype plan.", icon="🔔")
+            if st.session_state.get("retention_reminder", {}).get("action") == last_action:
+                st.success("Reminder added: " + reminder_details[last_action])
 
         # Free-Form Consultation Desk at bottom of AI Retention Engine
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
