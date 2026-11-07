@@ -611,7 +611,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
         "DATE_MISMATCH": "Your salary date and SIP debit date may be out of sync. Check whether the platform and mandate support a date change and whether the next debit is still within the change cut-off. Do not assume a change will take effect for the next instalment; confirm the effective date with the provider.",
         "PAYMENT_FAILURE": "A failed debit does not itself redeem units that were already allotted. Check the failure reason in your payment or platform record, then review your bank's schedule of charges and the provider's instructions before retrying. Fees and retry options vary.",
         "PAUSE_RECOVERY": "Before stopping future instalments, compare continuity options such as reducing the contribution to an affordable amount, aligning the debit date with salary, or resolving a failed AutoPay debit. Do not stretch your budget to maintain a SIP. Existing units are not automatically redeemed when future instalments stop and remain exposed to market movements.",
-        "GENERAL": "I can help with SIP continuity, affordability, debit-date and payment-failure questions. Tell me what changed (for example, your available monthly budget, salary date or debit failure), and I'll compare the relevant options. Platform-specific rules are not assumed by this prototype."
+        "GENERAL": "A Systematic Investment Plan (SIP) is a way to invest a fixed amount in a mutual fund at regular intervals, such as monthly. Each instalment buys mutual-fund units at the applicable NAV. The value of those units can rise or fall with the market. In this prototype, I can also explain SIP continuity, affordability, debit-date and payment-failure questions. Platform-specific rules are not assumed."
     }
 
     client = get_groq_client(api_key)
@@ -667,14 +667,17 @@ Rules:
             answer = (response.choices[0].message.content or "").strip()
             if answer:
                 return {"type": "SUCCESS", "title": "SIP continuity guidance", "message": answer, "action_cards": []}
-        except Exception:
-            pass
+        except Exception as api_exc:
+            api_error = f"{type(api_exc).__name__}: {str(api_exc)[:240]}"
+    else:
+        api_error = "GROQ_API_KEY is not configured in this Streamlit app's Secrets."
 
     return {
         "type": "SUCCESS",
         "title": "SIP continuity guidance",
         "message": fallback.get(intent, fallback["GENERAL"]),
-        "action_cards": []
+        "action_cards": [],
+        "api_error": api_error
     }
 
 # ==============================================================================
@@ -1099,7 +1102,7 @@ with tab1:
                     "status": "Added to this prototype session"
                 }
                 st.toast("Month-5 Win-Win review reminder added to your prototype plan.", icon="🔔")
-            if st.session_state.get("retention_reminder", {}).get("action") == "win_win":
+            if (st.session_state.get("retention_reminder") or {}).get("action") == "win_win":
                 st.success("Reminder added: Review the reduced SIP in month 5, before the proposed month-6 step-up.")
 
         # Free-Form Consultation Desk at bottom of AI Retention Engine
@@ -1171,6 +1174,8 @@ with tab1:
                 with st.container(border=True):
                     st.markdown(f"**{ff_ans.get('title', 'SIP continuity guidance')}**")
                     st.markdown(display_output)
+                    if ff_ans.get("api_error"):
+                        st.warning("Groq AI could not be reached, so this answer is the local fallback. Check that GROQ_API_KEY is saved in this app's Streamlit Secrets and review the app logs for the API error.")
                 
                 # ------------------------------------------------------------------------------
 
