@@ -607,10 +607,10 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
 
     # Local fallback stays factual and short when the API is unavailable.
     fallback = {
-        "AFFORDABILITY": "A temporary reduction or pause may be worth exploring if your budget has changed. First decide what you can comfortably afford after essential expenses. Whether an SIP can be modified or paused, and the applicable cut-off or charges, depends on the platform, AMC and payment arrangement. Existing units are not automatically redeemed.",
+        "AFFORDABILITY": "If your budget has tightened, first check whether a smaller contribution of at least ₹500 fits after essential expenses. Keeping a manageable contribution can preserve investing continuity while reducing monthly pressure. If even ₹500 is not affordable, do not force it; a temporary pause may be safer than straining essential spending. Existing units are not automatically redeemed when future instalments stop.",
         "DATE_MISMATCH": "Your salary date and SIP debit date may be out of sync. Check whether the platform and mandate support a date change and whether the next debit is still within the change cut-off. Do not assume a change will take effect for the next instalment; confirm the effective date with the provider.",
         "PAYMENT_FAILURE": "A failed debit does not itself redeem units that were already allotted. Check the failure reason in your payment or platform record, then review your bank's schedule of charges and the provider's instructions before retrying. Fees and retry options vary.",
-        "PAUSE_RECOVERY": "Stopping future SIP instalments does not automatically sell your existing units. Their value remains exposed to market movements. Pause, cancellation and restart options depend on the platform, AMC and mandate terms; check the applicable conditions before choosing.",
+        "PAUSE_RECOVERY": "Before stopping future instalments, compare continuity options such as reducing the contribution to an affordable amount, aligning the debit date with salary, or resolving a failed AutoPay debit. Do not stretch your budget to maintain a SIP. Existing units are not automatically redeemed when future instalments stop and remain exposed to market movements.",
         "GENERAL": "I can help with SIP continuity, affordability, debit-date and payment-failure questions. Tell me what changed (for example, your available monthly budget, salary date or debit failure), and I'll compare the relevant options. Platform-specific rules are not assumed by this prototype."
     }
 
@@ -629,7 +629,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             ]
         if ctx:
             context_lines.extend([
-                f"Scenario: {ctx.get('type', 'Not specified')}",
+                f"Scenario(s): {', '.join(ctx.get('types', [])) or ctx.get('type', 'Not specified')}",
                 f"Expense increase: ₹{ctx.get('x_rent', 0)}",
                 f"Salary date: {ctx.get('x_salary_date', 'Not specified')}",
                 f"Illustrative affordable contribution: ₹{ctx.get('calculated_step_down', 'Not calculated')}"
@@ -644,14 +644,14 @@ Knowledge base: {kb}
 Answer in at most 140 words, using this structure:
 1. One sentence acknowledging the user's situation.
 2. Up to three relevant options or steps, only when useful.
-3. One short "What to verify" note if platform/bank/AMC policy is involved.
+3. If an option depends on provider rules, briefly say availability varies; do not add a generic checklist.
 
 Rules:
 - Never invent Groww screen names, menu paths, pause durations, fees, minimums, cut-offs, processing times, bank charges or credit-score outcomes.
-- If the knowledge base does not establish a platform-specific fact, say it is not verified and direct the user to confirm it; do not fabricate instructions.
-- Do not tell users they must continue investing. Respect that stopping may be appropriate.
+- If the knowledge base does not establish a platform-specific fact, say availability varies; do not fabricate instructions or add a generic "What to verify" checklist.
+- Prioritise continuity options: affordable step-down, debit-date alignment and resolving payment failures. Do not promote cancellation as a solution. Never pressure someone to invest beyond essential expenses; if ₹500 is not affordable, say not to force a contribution.
 - Existing units are not automatically redeemed when future contributions stop; market value can rise or fall.
-- Step-Down + Auto-Step-Up is a proposed concept, not a confirmed Groww feature.
+- Step-Down + Auto-Step-Up is a proposed concept, not a confirmed Groww feature. Present it as an optional retention concept, not an executed feature.
 - All account details and actions in this app are simulations, not live transactions.
 - Use concise Markdown bullets. No tables, long introductions or repeated disclaimers."""
         try:
