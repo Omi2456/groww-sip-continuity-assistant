@@ -389,7 +389,8 @@ if "current_screen" not in st.session_state:
 
 if "active_sip" not in st.session_state:
     st.session_state.active_sip = {
-        "fund": "Nifty 50 Index Fund (UTI / HDFC)",
+        "fund": "Northstar Index Fund",
+        "bank": "Finora Bank",
         "amount": 3500,
         "debit_date": "3rd of month",
         "month": 4,
@@ -419,6 +420,37 @@ if "pipeline_active" not in st.session_state:
 
 if "free_form_query" not in st.session_state:
     st.session_state.free_form_query = ""
+
+# Centered confirmation dialog for important user-visible notifications.
+if "center_notification" not in st.session_state:
+    st.session_state.center_notification = None
+
+@st.dialog("SIP Continuity Assistant", width="large")
+def show_center_notification(notification):
+    st.markdown(
+        f"""
+        <div style="text-align:center; padding:18px 12px 10px;">
+            <div style="font-size:46px; line-height:1.2; margin-bottom:12px;">{notification.get("icon", "✅")}</div>
+            <div style="font-size:25px; font-weight:800; color:#00D09C; margin-bottom:10px;">
+                {notification.get("title", "Update")}
+            </div>
+            <div style="font-size:18px; line-height:1.65; color:#FFFFFF;">
+                {notification.get("message", "")}
+            </div>
+            <div style="font-size:13px; color:#A3A8B0; margin-top:16px;">
+                Prototype demonstration only — no real bank, mandate or SIP transaction is executed.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    if st.button("Got it", type="primary", use_container_width=True, key="btn_dismiss_center_notification"):
+        st.session_state.center_notification = None
+        st.rerun()
+
+# Render important notifications as a large, centered modal instead of a small corner toast.
+if st.session_state.center_notification:
+    show_center_notification(st.session_state.center_notification)
 
 # Clean Sidebar: Groww Header Logo, Portfolio Summary Card, SEBI Badge, Toggle
 with st.sidebar:
@@ -706,14 +738,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Interactive Notification Banner
-if st.session_state.action_feedback:
-    st.success(st.session_state.action_feedback)
-    if st.button("Dismiss Notification", key="btn_dismiss_notification"):
-        st.session_state.action_feedback = None
-        st.session_state.pipeline_active = False
-        st.rerun()
-
 # ==============================================================================
 # 5. MULTI-TAB STRUCTURE
 # ==============================================================================
@@ -762,23 +786,23 @@ with tab1:
         st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
 
         # Exactly 1 clean setup card (no ghost container)
-        col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
+        col_s1, col_s2, col_s3, col_s4 = st.columns([2.5, 2, 2, 2])
         
         with col_s1:
             # Illustrative fund examples (not recommendations)
             scheme_choices = [
-                "Parag Parikh Flexi Cap Fund",
-                "Nifty 50 Index Fund (UTI / HDFC)",
-                "SBI Small Cap Fund",
-                "Mirae Asset Large Cap Fund",
-                "Axis Bluechip Fund",
-                "Tata Digital India Fund",
-                "Nippon India Small Cap Fund",
-                "Quant Active Fund",
-                "ICICI Prudential Equity & Debt Fund",
-                "HDFC Mid-Cap Opportunities Fund"
+                "Evergreen Growth Fund",
+                "Northstar Index Fund",
+                "Horizon Balanced Fund",
+                "Cedar Small-Cap Fund",
+                "BluePeak Equity Fund",
+                "Summit Digital Innovation Fund",
+                "Nova Emerging Companies Fund",
+                "Pioneer Active Allocation Fund",
+                "Riverstone Equity & Debt Fund",
+                "Maple Mid-Cap Fund"
             ]
-            chosen_scheme = st.selectbox("Illustrative Scheme Example", scheme_choices, index=1)
+            chosen_scheme = st.selectbox("Fictional Scheme Example", scheme_choices, index=1)
 
         with col_s2:
             chosen_amt = st.number_input(
@@ -803,9 +827,13 @@ with tab1:
                 index=1 # Default 3rd of month
             )
 
+        with col_s4:
+            bank_choices = ["Finora Bank", "BluePeak Bank", "NovaTrust Bank", "Cedarline Bank"]
+            chosen_bank = st.selectbox("Illustrative Bank", bank_choices, index=0)
+
         st.markdown("""
         <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px; margin:16px 0; font-size:14px; color:#A3A8B0;">
-            🔒 <b>Prototype information:</b> Fund examples are illustrative. Availability and processing of SIP changes depend on platform, AMC and bank terms.
+            🔒 <b>Academic prototype:</b> All scheme and bank names are fictional. Portfolio figures are simulated. This project is independent and is not affiliated with or endorsed by Groww, any bank or any AMC.
         </div>
         """, unsafe_allow_html=True)
 
@@ -814,6 +842,7 @@ with tab1:
                 time.sleep(2)
             st.session_state.active_sip = {
                 "fund": chosen_scheme,
+                "bank": chosen_bank,
                 "amount": chosen_amt,
                 "debit_date": chosen_debit_date,
                 "month": 4, # Progress to Month 4 for friction testing
@@ -823,7 +852,11 @@ with tab1:
                 "status": "Active"
             }
             st.session_state.current_screen = 2
-            st.toast("🎉 SIP Started Successfully!", icon="🎉")
+            st.session_state.center_notification = {
+                "icon": "🎉",
+                "title": "Simulated SIP journey started",
+                "message": f"{chosen_scheme} has been added to your demo portfolio with a monthly contribution of ₹{chosen_amt:,} and {chosen_bank} as the illustrative bank."
+            }
             st.rerun()
 
     # ==========================================================================
@@ -848,7 +881,7 @@ with tab1:
             summary_cols[0].metric("Monthly SIP", f"₹{sip['amount']:,}")
             summary_cols[1].metric("Total invested", f"₹{sip['total_invested']:,}")
             summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
-            st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
+            st.caption(f"{sip['fund']} · {sip.get('bank', 'Finora Bank')} (illustrative bank) · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
         # Evidence behind the illustrative value: invested amount plus an explicitly assumed uplift.
         invested = int(sip["total_invested"])
@@ -1101,10 +1134,14 @@ STRICT SAFETY:
             for p in [30, 75, 100]:
                 time.sleep(0.12)
                 prog.progress(p)
-            st.toast(toast_msg, icon="✅")
             if update_sip_fn:
                 update_sip_fn()
             st.session_state.action_feedback = feedback_msg
+            st.session_state.center_notification = {
+                "icon": "✅",
+                "title": "Your prototype action is recorded",
+                "message": feedback_msg
+            }
             st.session_state.last_retention_action = action_key
             st.session_state.retention_reminder = None
             st.session_state.pipeline_active = True
@@ -1177,9 +1214,6 @@ STRICT SAFETY:
                     action_key="skip"
                 )
 
-        if st.session_state.get("action_feedback"):
-            st.success("✅ " + st.session_state.action_feedback)
-
         # Month-5 review reminder belongs only to the Win-Win step-down + proposed step-up plan.
         if st.session_state.get("last_retention_action") == "win_win":
             st.markdown("##### 🔔 Follow-up reminder")
@@ -1190,9 +1224,14 @@ STRICT SAFETY:
                     "message": "Review the reduced SIP in month 5, before the proposed month-6 step-up.",
                     "status": "Added to this prototype session"
                 }
-                st.toast("Month-5 Win-Win review reminder added to your prototype plan.", icon="🔔")
+                st.session_state.center_notification = {
+                    "icon": "🔔",
+                    "title": "Reminder added to prototype plan",
+                    "message": "Review the reduced SIP in month 5, before the proposed month-6 step-up."
+                }
+                st.rerun()
             if (st.session_state.get("retention_reminder") or {}).get("action") == "win_win":
-                st.success("Reminder added: Review the reduced SIP in month 5, before the proposed month-6 step-up.")
+                st.caption("Reminder added to this prototype session: review the reduced SIP in month 5, before the proposed month-6 step-up.")
 
         # Free-Form Consultation Desk at bottom of AI Retention Engine
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
