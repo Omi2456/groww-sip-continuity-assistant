@@ -861,11 +861,6 @@ with tab1:
             st.metric("Illustrative change", f"₹{illustrative_gain:,}", delta=f"{(illustrative_gain/invested*100):.1f}%" if invested else None)
             st.caption("Basis: 4 instalments × monthly SIP amount, plus an assumed 7.4% illustrative uplift. Not live NAV, actual fund performance or a return forecast.")
 
-        if selected_scenarios and st.button("Continue to Step 3: AI Retention Engine →", type="primary", use_container_width=True, key="btn_continue_retention"):
-            st.session_state.scenario_answer = None
-            st.session_state.current_screen = 3
-            st.rerun()
-
 
         with st.container(border=True):
             # Main problem selector: users may select any combination of the three disruptions.
@@ -877,13 +872,12 @@ with tab1:
             </style>
             """, unsafe_allow_html=True)
 
-            with st.container(border=True):
-                st.markdown("""
-                <div style="background:linear-gradient(135deg,#123A30 0%,#17232C 58%,#242033 100%);border:2px solid #00D09C;border-radius:14px;padding:20px 18px;margin:0 0 14px;animation:softGlow 3s ease-in-out infinite;">
-                  <div style="font-size:25px;font-weight:900;letter-spacing:.3px;color:#00D09C;">⚡ WHAT HAS CHANGED?</div>
-                  <div style="color:#F1F5F6;font-size:17px;font-weight:550;margin-top:8px;">Select every situation that applies — choose one, two or all three.</div>
-                </div>
-                """, unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background:linear-gradient(135deg,#123A30 0%,#17232C 58%,#242033 100%);border:2px solid #00D09C;border-radius:14px;padding:20px 18px;margin:0 0 14px;animation:softGlow 3s ease-in-out infinite;">
+              <div style="font-size:25px;font-weight:900;letter-spacing:.3px;color:#00D09C;">⚡ WHAT HAS CHANGED?</div>
+              <div style="color:#F1F5F6;font-size:17px;font-weight:550;margin-top:8px;">Select every situation that applies — choose one, two or all three.</div>
+            </div>
+            """, unsafe_allow_html=True)
 
             selected_scenarios = []
             if st.checkbox("🏠 Expense pressure", key="scenario_cashflow", help="My expenses increased or my current SIP is difficult to afford."):
@@ -918,6 +912,11 @@ with tab1:
                 st.caption(f"{len(selected_scenarios)} of 3 situations selected. The AI Retention Engine will assess them together in Step 3.")
             else:
                 st.info("Select at least one situation to continue.")
+
+            if selected_scenarios and st.button("Continue to Step 3: AI Retention Engine →", type="primary", use_container_width=True, key="btn_continue_retention"):
+                st.session_state.scenario_answer = None
+                st.session_state.current_screen = 3
+                st.rerun()
 
 
         # Retention-first nudge: show the contribution gap without encouraging cancellation.
