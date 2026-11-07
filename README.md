@@ -40,8 +40,10 @@ Users are directed to verify platform-, AMC- and bank-specific rules with the re
 ## Product concepts and demo boundaries
 
 - **Step-Down + Auto-Step-Up** is presented as a proposed product innovation, not an existing Groww feature.
-- Fund names in the setup screen are illustrative examples, not investment recommendations.
+- All scheme and bank names in the setup screen are fictional placeholders created for this academic prototype; they are not real investment products or financial institutions and are not recommendations.
 - The SIP, portfolio value, folio, mandate and debit history are simulated.
+- Important success confirmations and prototype action messages appear in a large, centered dialog for visibility.
+- The prototype is independently developed and is not affiliated with or endorsed by Groww, any bank or any AMC.
 - Action confirmations are demo-only. No real SIP, NPCI mandate, bank payment or AMC instruction is submitted.
 - Reminder interactions are session-level demonstrations. No WhatsApp, SMS or external reminder is sent.
 - Simulator outputs are illustrative projections, not promised or expected returns.
