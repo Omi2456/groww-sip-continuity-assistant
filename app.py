@@ -644,7 +644,7 @@ Knowledge base: {kb}
 Answer in at most 140 words, using this structure:
 1. One sentence acknowledging the user's situation.
 2. Up to three relevant options or steps, only when useful.
-3. One short "What to verify" note if platform/bank/AMC policy is involved.
+3. If a platform, AMC or bank rule is unknown, state briefly that availability varies; do not send the user away or invent a rule.
 
 Rules:
 - Never invent Groww screen names, menu paths, pause durations, fees, minimums, cut-offs, processing times, bank charges or credit-score outcomes.
@@ -970,7 +970,7 @@ with tab1:
         with st.container(border=True):
             st.markdown(f"#### {answer.get('title','Your continuity plan')}")
             st.markdown(answer.get("message",""))
-            st.caption("Guidance is based on the information entered here. No external account or payment action is performed.")
+            st.caption("Your selected options and account figures are illustrative prototype data.")
 
         st.markdown("#### Choose how you want to proceed")
         st.caption("These controls update your prototype plan and show the outcome immediately.")
@@ -982,7 +982,7 @@ with tab1:
                     old_amount = int(sip["amount"])
                     st.session_state.active_sip["amount"] = affordable
                     st.session_state.active_sip["status"] = "Adjusted"
-                    st.session_state.action_feedback = f"Your prototype SIP plan has been updated from ₹{old_amount:,} to ₹{affordable:,} per month."
+                    st.session_state.action_feedback = f"Monthly SIP contribution updated: ₹{old_amount:,} → ₹{affordable:,}."
                     st.session_state.last_action = "step_down"
                     st.rerun()
         if "SALARY_DELAY" in selected_scenarios:
@@ -991,14 +991,14 @@ with tab1:
                 if st.button("Save preferred debit date", use_container_width=True, key="btn_apply_date", disabled=proposed_date == "Variable"):
                     planned_date = f"{proposed_date} of month"
                     st.session_state.active_sip["debit_date"] = planned_date
-                    st.session_state.action_feedback = f"Your SIP plan now shows {planned_date} as your preferred debit date."
+                    st.session_state.action_feedback = f"Preferred debit date updated in your plan: {planned_date}."
                     st.session_state.last_action = "date_change"
                     st.rerun()
         if "AUTOPAY_FAILURE" in selected_scenarios:
             with action_cols[2]:
                 if st.button("Mark issue reviewed", use_container_width=True, key="btn_review_failure"):
                     st.session_state.active_sip["payment_status"] = "Reviewed"
-                    st.session_state.action_feedback = "Payment issue marked as reviewed in your prototype. No bank retry or mandate change was sent."
+                    st.session_state.action_feedback = "Payment issue marked as reviewed. No bank retry or mandate change was sent."
                     st.session_state.last_action = "payment_review"
                     st.rerun()
 
@@ -1010,7 +1010,12 @@ with tab1:
             reduced = int(context.get("calculated_step_down",500))
             months = 6
             gap = max(0,original-reduced) * months
-            st.info(f"**Contribution difference over {months} months: ₹{gap:,}.** A lower contribution keeps investing possible while reducing monthly outflow by ₹{max(0,original-reduced):,}. This is a cash-flow comparison, not a prediction of investment loss.")
+            loss_cols = st.columns(2)
+            with loss_cols[0]:
+                st.metric("If you stop for 6 months", "₹0", help="Future contributions during this illustrative period.")
+            with loss_cols[1]:
+                st.metric(f"If you continue at ₹{reduced:,}/month", f"₹{reduced*months:,}", help="Illustrative contributions over six months.")
+            st.warning(f"Stopping instead of maintaining a ₹{reduced:,}/month contribution means **₹{reduced*months:,} less invested over six months**. Compared with your previous ₹{original:,}/month SIP, the six-month contribution gap is ₹{gap:,}. This is a contribution difference—not a guaranteed loss in portfolio value.")
         if "CASH_FLOW_SHOCK" in selected_scenarios and int(context.get("calculated_step_down",500)) < 500:
             st.warning("If ₹500 is not affordable, don't force a contribution. Prioritise essential expenses and consider a temporary stop rather than taking on financial strain.")
 
