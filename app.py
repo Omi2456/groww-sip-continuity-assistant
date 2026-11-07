@@ -754,7 +754,7 @@ with tab1:
     # ==========================================================================
     if st.session_state.current_screen == 1:
         st.markdown("### 🚀 Setup Your First Groww SIP")
-        st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
+        st.caption("Create a simulated SIP profile to explore the continuity journey.")
 
         # Exactly 1 clean setup card (no ghost container)
         col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
@@ -804,9 +804,8 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("Start SIP & Pay First Instalment", use_container_width=True):
-            with st.spinner("Creating a simulated SIP journey..."):
-                time.sleep(2)
+        if st.button("Create SIP profile", type="primary", use_container_width=True):
+            with st.spinner("Preparing your SIP profile..."):
             st.session_state.active_sip = {
                 "original_amount": chosen_amt,
                 "fund": chosen_scheme,
@@ -819,7 +818,7 @@ with tab1:
                 "status": "Active"
             }
             st.session_state.current_screen = 2
-            st.toast("🎉 SIP Started Successfully!", icon="🎉")
+            st.toast("Your SIP profile is ready.", icon="✅")
             st.rerun()
 
     # ==========================================================================
@@ -989,9 +988,10 @@ with tab1:
         if "SALARY_DELAY" in selected_scenarios:
             with action_cols[1]:
                 proposed_date = context.get("x_salary_date","10th")
-                if st.button("Align planned debit date", use_container_width=True, key="btn_apply_date"):
-                    st.session_state.active_sip["debit_date"] = proposed_date
-                    st.session_state.action_feedback = f"Your prototype plan now uses the {proposed_date} as the planned debit date."
+                if st.button("Save preferred debit date", use_container_width=True, key="btn_apply_date", disabled=proposed_date == "Variable"):
+                    planned_date = f"{proposed_date} of month"
+                    st.session_state.active_sip["debit_date"] = planned_date
+                    st.session_state.action_feedback = f"Your SIP plan now shows {planned_date} as your preferred debit date."
                     st.session_state.last_action = "date_change"
                     st.rerun()
         if "AUTOPAY_FAILURE" in selected_scenarios:
