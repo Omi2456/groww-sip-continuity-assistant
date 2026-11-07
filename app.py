@@ -390,7 +390,6 @@ if "current_screen" not in st.session_state:
 if "active_sip" not in st.session_state:
     st.session_state.active_sip = {
         "fund": "Northstar Index Fund",
-        "bank": "Finora Bank",
         "amount": 3500,
         "debit_date": "3rd of month",
         "month": 4,
@@ -421,36 +420,53 @@ if "pipeline_active" not in st.session_state:
 if "free_form_query" not in st.session_state:
     st.session_state.free_form_query = ""
 
-# Centered confirmation dialog for important user-visible notifications.
+# Compact, centered toast-style notifications (auto-dismiss; no acknowledgement button).
 if "center_notification" not in st.session_state:
     st.session_state.center_notification = None
 
-@st.dialog("SIP Continuity Assistant", width="large")
-def show_center_notification(notification):
+if st.session_state.center_notification:
+    notification = st.session_state.center_notification
     st.markdown(
         f"""
-        <div style="text-align:center; padding:18px 12px 10px;">
-            <div style="font-size:46px; line-height:1.2; margin-bottom:12px;">{notification.get("icon", "✅")}</div>
-            <div style="font-size:25px; font-weight:800; color:#00D09C; margin-bottom:10px;">
-                {notification.get("title", "Update")}
-            </div>
-            <div style="font-size:18px; line-height:1.65; color:#FFFFFF;">
-                {notification.get("message", "")}
-            </div>
-            <div style="font-size:13px; color:#A3A8B0; margin-top:16px;">
-                Prototype demonstration only — no real bank, mandate or SIP transaction is executed.
+        <style>
+        @keyframes sipToastInOut {{
+            0% {{ opacity:0; transform:translate(-50%, -14px); }}
+            8% {{ opacity:1; transform:translate(-50%, 0); }}
+            82% {{ opacity:1; transform:translate(-50%, 0); }}
+            100% {{ opacity:0; transform:translate(-50%, -8px); visibility:hidden; }}
+        }}
+        .sip-center-toast {{
+            position:fixed; z-index:999999; top:46%; left:50%;
+            transform:translate(-50%, -50%);
+            width:min(88vw, 430px); box-sizing:border-box;
+            display:flex; align-items:center; gap:13px;
+            padding:15px 18px; border-radius:14px;
+            background:#20262D; border:1px solid #00D09C;
+            box-shadow:0 10px 34px rgba(0,0,0,.48);
+            color:#FFFFFF; animation:sipToastInOut 4.2s ease forwards;
+            pointer-events:none;
+        }}
+        .sip-center-toast-icon {{ font-size:27px; line-height:1; flex:0 0 auto; }}
+        .sip-center-toast-title {{ color:#00D09C; font-size:16px; font-weight:800; margin-bottom:3px; }}
+        .sip-center-toast-message {{ color:#FFFFFF; font-size:14px; line-height:1.45; }}
+        @media (max-width:600px) {{
+            .sip-center-toast {{ width:88vw; padding:13px 15px; }}
+            .sip-center-toast-title {{ font-size:15px; }}
+            .sip-center-toast-message {{ font-size:13px; }}
+        }}
+        </style>
+        <div class="sip-center-toast" role="status" aria-live="polite">
+            <div class="sip-center-toast-icon">{notification.get("icon", "✅")}</div>
+            <div>
+                <div class="sip-center-toast-title">{notification.get("title", "Update")}</div>
+                <div class="sip-center-toast-message">{notification.get("message", "")}</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-    if st.button("Got it", type="primary", use_container_width=True, key="btn_dismiss_center_notification"):
-        st.session_state.center_notification = None
-        st.rerun()
-
-# Render important notifications as a large, centered modal instead of a small corner toast.
-if st.session_state.center_notification:
-    show_center_notification(st.session_state.center_notification)
+    # Clear after rendering so it will not reappear on a later unrelated rerun.
+    st.session_state.center_notification = None
 
 # Clean Sidebar: Groww Header Logo, Portfolio Summary Card, SEBI Badge, Toggle
 with st.sidebar:
@@ -785,36 +801,34 @@ with tab1:
         st.markdown("### 🚀 Setup Your First Groww SIP")
         st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
 
-        # Exactly 1 clean setup card (no ghost container)
-        col_s1, col_s2, col_s3, col_s4 = st.columns([2.5, 2, 2, 2])
-        
-        with col_s1:
-            # Illustrative fund examples (not recommendations)
-            scheme_choices = [
-                "Evergreen Growth Fund",
-                "Northstar Index Fund",
-                "Horizon Balanced Fund",
-                "Cedar Small-Cap Fund",
-                "BluePeak Equity Fund",
-                "Summit Digital Innovation Fund",
-                "Nova Emerging Companies Fund",
-                "Pioneer Active Allocation Fund",
-                "Riverstone Equity & Debt Fund",
-                "Maple Mid-Cap Fund"
-            ]
-            chosen_scheme = st.selectbox("Fictional Scheme Example", scheme_choices, index=1)
+        # Responsive setup layout: scheme gets its own row; amount and debit date share the next row.
+        st.markdown("#### Choose a fictional scheme")
+        scheme_choices = [
+            "Evergreen Growth Fund",
+            "Northstar Index Fund",
+            "Horizon Balanced Fund",
+            "Cedar Small-Cap Fund",
+            "BluePeak Equity Fund",
+            "Summit Digital Innovation Fund",
+            "Nova Emerging Companies Fund",
+            "Pioneer Active Allocation Fund",
+            "Riverstone Equity & Debt Fund",
+            "Maple Mid-Cap Fund"
+        ]
+        chosen_scheme = st.selectbox("Fictional Scheme Example", scheme_choices, index=1)
 
-        with col_s2:
+        col_amount, col_date = st.columns(2, gap="medium")
+        with col_amount:
             chosen_amt = st.number_input(
                 "Monthly Commitment Amount (₹)",
                 min_value=500,
                 max_value=25000,
                 value=3500,
                 step=500,
-                help="Minimum threshold: ₹500 (AMC standard)"
+                help="Illustrative amount for this prototype"
             )
 
-        with col_s3:
+        with col_date:
             debit_date_options = [
                 "1st of month",
                 "3rd of month",
@@ -824,16 +838,12 @@ with tab1:
             chosen_debit_date = st.selectbox(
                 "AutoPay Debit Date",
                 debit_date_options,
-                index=1 # Default 3rd of month
+                index=1
             )
-
-        with col_s4:
-            bank_choices = ["Finora Bank", "BluePeak Bank", "NovaTrust Bank", "Cedarline Bank"]
-            chosen_bank = st.selectbox("Illustrative Bank", bank_choices, index=0)
 
         st.markdown("""
         <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px; margin:16px 0; font-size:14px; color:#A3A8B0;">
-            🔒 <b>Academic prototype:</b> All scheme and bank names are fictional. Portfolio figures are simulated. This project is independent and is not affiliated with or endorsed by Groww, any bank or any AMC.
+            🔒 <b>Academic prototype:</b> Scheme names are fictional. Portfolio figures are simulated. This project is independent and is not affiliated with or endorsed by Groww or any financial institution.
         </div>
         """, unsafe_allow_html=True)
 
@@ -842,7 +852,6 @@ with tab1:
                 time.sleep(2)
             st.session_state.active_sip = {
                 "fund": chosen_scheme,
-                "bank": chosen_bank,
                 "amount": chosen_amt,
                 "debit_date": chosen_debit_date,
                 "month": 4, # Progress to Month 4 for friction testing
@@ -855,7 +864,7 @@ with tab1:
             st.session_state.center_notification = {
                 "icon": "🎉",
                 "title": "Simulated SIP journey started",
-                "message": f"{chosen_scheme} has been added to your demo portfolio with a monthly contribution of ₹{chosen_amt:,} and {chosen_bank} as the illustrative bank."
+                "message": f"{chosen_scheme} has been added to your demo portfolio with a monthly contribution of ₹{chosen_amt:,}."
             }
             st.rerun()
 
@@ -881,7 +890,7 @@ with tab1:
             summary_cols[0].metric("Monthly SIP", f"₹{sip['amount']:,}")
             summary_cols[1].metric("Total invested", f"₹{sip['total_invested']:,}")
             summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
-            st.caption(f"{sip['fund']} · {sip.get('bank', 'Finora Bank')} (illustrative bank) · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
+            st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
         # Evidence behind the illustrative value: invested amount plus an explicitly assumed uplift.
         invested = int(sip["total_invested"])
