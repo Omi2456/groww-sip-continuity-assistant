@@ -638,7 +638,8 @@ Rules:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=700
+                max_completion_tokens=700,
+                reasoning_effort="low"
             )
             ai_text = (response.choices[0].message.content or "").strip() or None
         except Exception:
