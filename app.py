@@ -920,6 +920,7 @@ with tab1:
 
 
         if selected_scenarios and st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_continue_retention"):
+            st.session_state.pop("retention_ai_guidance", None)
             st.session_state.scenario_answer = None
             st.session_state.current_screen = 3
             st.rerun()
@@ -976,44 +977,124 @@ with tab1:
         if not selected_scenarios:
             st.warning("No disruption selected. Return to Step 2 and select at least one situation.")
         else:
-            # Explain the user's selected situation and offer a practical, rules-based starting point.
-            guidance_lines = []
-            if "CASH_FLOW_SHOCK" in selected_scenarios:
-                guidance_lines.append(
-                    f"**Expense pressure:** You reported a monthly expense increase of ₹{int(scenario_context.get('x_rent', 0)):,}. "
-                    f"A step-down to ₹{step_down_val:,} may reduce the monthly commitment while keeping a SIP contribution going."
-                )
-            if "SALARY_DELAY" in selected_scenarios:
-                guidance_lines.append(
-                    f"**Salary-date mismatch:** Your salary usually arrives on {scenario_context.get('x_salary_date', 'a later date')}. "
-                    "Check whether changing the SIP debit date is supported and confirm the effective date before the next debit."
-                )
-            if "AUTOPAY_FAILURE" in selected_scenarios:
-                guidance_lines.append(
-                    f"**AutoPay debit failure:** The reported reason is {scenario_context.get('failure_reason', 'not specified')}. "
-                    "Check the bank or mandate failure message first; resolve the cause before retrying the debit."
-                )
-            with st.container(border=True):
-                st.markdown("#### Your situation")
-                for line in guidance_lines:
-                    st.markdown(line)
-                st.markdown("#### Which continuity option may fit?")
-                st.markdown(
-                    "- **Step-Down:** Consider this first when the current monthly amount is difficult to afford. "
-                    "It lowers the commitment to the amount you entered in Step 2.\n"
-                    "- **Win-Win: Step-Down + Auto-Step-Up:** Consider this when you need relief now but expect your cash flow to improve. "
-                    "It records a proposed review before restoring the original amount in month 6.\n"
-                    "- **Skip Next Instalment:** Consider this when the issue is temporary or a debit needs time to be resolved. "
-                    "It represents one upcoming cycle only and remains subject to provider terms."
-                )
-                if "CASH_FLOW_SHOCK" in selected_scenarios:
-                    st.info(f"Starting point based on your input: compare Step-Down to ₹{step_down_val:,} with the Win-Win option. Choose Skip only if a one-cycle gap is more suitable.")
-                elif "SALARY_DELAY" in selected_scenarios and "AUTOPAY_FAILURE" not in selected_scenarios:
-                    st.info("Starting point based on your input: first check whether the debit date can be aligned with your salary date. If that cannot take effect in time, compare Skip Next Instalment with the other options.")
-                elif "AUTOPAY_FAILURE" in selected_scenarios:
-                    st.info("Starting point based on your input: identify and resolve the debit failure reason first. If the next debit is at risk, compare Skip Next Instalment with a manageable Step-Down.")
-                st.caption("This guidance is generated from your Step 2 selections using fixed prototype decision rules; it does not require an AI/API call and does not change a real SIP.")
+            # AI-assisted retention reasoning: one Groq call per Step 3 session, cached across reruns.
+            if "retention_ai_guidance" not in st.session_state:
+                with st.spinner("🧠 Assessing your situation and comparing continuity options..."):
+                    portfolio_context = {
+                        "scheme": sip.get("fund", "Illustrative scheme"),
+                        "monthly_sip": int(sip.get("amount", 0) or 0),
+                        "instalments_completed": int(sip.get("instalments_paid", 0) or 0),
+                        "total_invested": int(sip.get("total_invested", 0) or 0),
+                        "illustrative_value": int(sip.get("current_value", 0) or 0),
+                        "debit_date": sip.get("debit_date", "Not set")
+                    }
+                    scenario_facts = {
+                        "selected_situations": selected_scenarios,
+                        "expense_increase_inr": scenario_context.get("x_rent"),
+                        "affordable_monthly_sip_inr": step_down_val if "CASH_FLOW_SHOCK" in selected_scenarios else None,
+                        "salary_date": scenario_context.get("x_salary_date"),
+                        "debit_failure_reason": scenario_context.get("failure_reason")
+                    }
+                    retention_prompt = f"""You are the reasoning engine for a SIP continuity education prototype. You are not Groww support and cannot execute transactions.
 
+USER'S SIMULATED SIP PROFILE:
+{json.dumps(portfolio_context, ensure_ascii=False)}
+
+USER'S SELECTED SITUATIONS AND INPUTS:
+{json.dumps(scenario_facts, ensure_ascii=False)}
+
+APPROVED KNOWLEDGE BASE:
+{json.dumps(GROWW_SIP_KNOWLEDGE_BASE, ensure_ascii=False)}
+
+TASK:
+Understand ALL selected situations together, not one at a time. Give a personalised, practical continuity assessment. Explain the main pressure, compare these three available prototype options, and recommend a sensible starting option based on the user's inputs:
+1. Step-Down: reduce the monthly amount to the affordable amount entered in Step 2 (only if affordability is selected).
+2. Win-Win: proposed Step-Down + a review in month 5 before a proposed restoration in month 6. This is a concept in this prototype, not an existing confirmed Groww feature or an automatic real mandate change.
+3. Skip Next Instalment: consider only for a temporary one-cycle issue or while resolving a debit problem; provider terms determine whether it is available.
+
+For salary-date mismatch, explain checking whether a debit-date change is supported and confirming its effective date. For failed AutoPay, prioritise identifying and resolving the failure reason. If multiple situations are selected, integrate them into one coherent recommendation and explain trade-offs.
+
+OUTPUT FORMAT:
+### What we understood
+### Recommended starting point
+### Compare your options
+### Why this may fit
+Use concise Markdown, plain language, and no more than about 180 words. Make the recommended option explicit but do not force the user to invest. If the entered affordable amount is below ₹500, do not recommend increasing it to ₹500; advise not to force an unaffordable contribution and discuss safer alternatives.
+
+STRICT SAFETY:
+- Never recommend a stock, fund, asset allocation or specific investment product.
+- Never promise returns, predict portfolio performance, or invent financial losses.
+- Never invent Groww menus, fees, bank charges, pause periods, cut-offs, processing times or provider rules.
+- Do not claim any real SIP, mandate, bank payment or reminder has been changed.
+- Do not calculate portfolio values or contribution totals; Python handles calculations elsewhere.
+- Existing units are not automatically redeemed when future instalments stop; their value can rise or fall.
+- Be supportive, not coercive. Essential expenses take priority.
+"""
+                    try:
+                        retention_client = get_groq_client(GROQ_API_KEY)
+                        if retention_client:
+                            retention_response = retention_client.chat.completions.create(
+                                model=DEFAULT_MODEL,
+                                messages=[
+                                    {"role": "system", "content": "You are a careful, context-aware SIP continuity reasoning assistant. Follow the supplied knowledge base and safety rules exactly. Do not invent platform policies."},
+                                    {"role": "user", "content": retention_prompt}
+                                ],
+                                temperature=0.2,
+                                max_completion_tokens=650
+                            )
+                            retention_text = (retention_response.choices[0].message.content or "").strip()
+                            if retention_text:
+                                st.session_state.retention_ai_guidance = {
+                                    "message": retention_text,
+                                    "source": "Groq AI",
+                                    "error": None
+                                }
+                            else:
+                                st.session_state.retention_ai_guidance = {
+                                    "message": "",
+                                    "source": "Local fallback",
+                                    "error": "The AI returned an empty response."
+                                }
+                        else:
+                            st.session_state.retention_ai_guidance = {
+                                "message": "",
+                                "source": "Local fallback",
+                                "error": "GROQ_API_KEY is not configured."
+                            }
+                    except Exception as retention_exc:
+                        st.session_state.retention_ai_guidance = {
+                            "message": "",
+                            "source": "Local fallback",
+                            "error": f"{type(retention_exc).__name__}: {str(retention_exc)[:180]}"
+                        }
+
+            ai_guidance = st.session_state.retention_ai_guidance
+            if ai_guidance.get("message"):
+                with st.container(border=True):
+                    st.markdown("#### 🧠 Personalised retention assessment")
+                    st.markdown(ai_guidance["message"])
+                    st.caption("Reasoned by Groq AI using your Step 1 profile, Step 2 selections and the prototype knowledge base. Calculations and safety checks remain Python-controlled.")
+            else:
+                # Deterministic fallback keeps Step 3 usable if Groq is unavailable.
+                fallback_lines = []
+                if "CASH_FLOW_SHOCK" in selected_scenarios:
+                    fallback_lines.append(f"**Expense pressure:** You reported a monthly expense increase of ₹{int(scenario_context.get('x_rent', 0)):,}. A Step-Down to ₹{step_down_val:,} may lower the commitment while maintaining a contribution, if this amount is genuinely affordable.")
+                if "SALARY_DELAY" in selected_scenarios:
+                    fallback_lines.append(f"**Salary-date mismatch:** Your salary usually arrives on {scenario_context.get('x_salary_date', 'a later date')}. Check whether a debit-date change is supported and confirm when it would take effect.")
+                if "AUTOPAY_FAILURE" in selected_scenarios:
+                    fallback_lines.append(f"**AutoPay debit failure:** Reported reason: {scenario_context.get('failure_reason', 'not specified')}. Check the bank or mandate failure message before retrying.")
+                with st.container(border=True):
+                    st.markdown("#### Your situation")
+                    for line in fallback_lines:
+                        st.markdown(line)
+                    st.markdown("#### Which continuity option may fit?")
+                    st.markdown(
+                        f"- **Step-Down to ₹{step_down_val:,}:** Consider if this amount fits after essential expenses.\\n"
+                        "- **Win-Win:** A proposed reduced contribution with a month-5 review before a possible month-6 restoration.\\n"
+                        "- **Skip Next Instalment:** Consider only for a temporary one-cycle issue or while resolving a debit problem."
+                    )
+                    st.info("Starting point: prioritise an affordable contribution or resolve the payment/date issue. Do not force an amount that your budget cannot support.")
+                    st.caption("Groq was unavailable for this response; this is the local rules-based fallback.")
         # Dynamic Action Execution Handler
         def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None, action_key=None):
             prog = st.progress(0)
