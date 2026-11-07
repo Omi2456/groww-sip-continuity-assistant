@@ -928,6 +928,50 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
+    # ==========================================================================
+    # SCREEN 3: AI Retention Engine — action plan, simulator choices and audit
+    # ==========================================================================
+    elif st.session_state.current_screen == 3:
+        if st.button("← Back to Active SIP Dashboard", key="btn_back_dashboard"):
+            st.session_state.current_screen = 2
+            st.rerun()
+
+        st.markdown("### 🧠 Step 3 — AI Retention Engine")
+        st.caption("Your selected situations are assessed together. Review the guidance, compare continuity options and choose the next step.")
+
+        sip = st.session_state.active_sip
+        selected_scenarios = st.session_state.get("retention_scenario_labels", [])
+        scenario_context = st.session_state.get("retention_scenario_context", {"portfolio": sip})
+        step_down_val = int(st.session_state.get("retention_step_down_val", sip["amount"]))
+        shock = selected_scenarios[0] if selected_scenarios else "CASH_FLOW_SHOCK"
+        is_low_sip = int(sip["amount"]) <= 1000
+        is_severe_crunch = "CASH_FLOW_SHOCK" in selected_scenarios and step_down_val < int(sip["amount"]) * 0.5
+
+        if not selected_scenarios:
+            st.warning("No disruption selected. Return to Step 2 and select at least one situation.")
+        else:
+            scenario_parts = []
+            if "CASH_FLOW_SHOCK" in selected_scenarios:
+                scenario_parts.append(f"monthly expenses increased by ₹{scenario_context.get('x_rent', 0)} and the affordable SIP amount is ₹{step_down_val}")
+            if "SALARY_DELAY" in selected_scenarios:
+                scenario_parts.append(f"salary usually arrives on {scenario_context.get('x_salary_date', 'a later date')}")
+            if "AUTOPAY_FAILURE" in selected_scenarios:
+                scenario_parts.append(f"AutoPay debit failed; reported reason: {scenario_context.get('failure_reason', 'unknown')}")
+            scenario_query = "My SIP continuity situation includes: " + "; ".join(scenario_parts) + f". My current SIP is ₹{sip['amount']} per month. Give retention-first options and practical next steps."
+            if st.button("✨ Analyse my situation with AI", type="primary", use_container_width=True, key="btn_run_retention_ai"):
+                with st.spinner("Checking your situation against the SIP continuity knowledge base..."):
+                    scenario_eval = run_eval_gate(scenario_query, GROQ_API_KEY, DEFAULT_MODEL)
+                    scenario_answer = generate_grounded_answer(scenario_query, scenario_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=scenario_context)
+                st.session_state.scenario_answer = scenario_answer
+                st.session_state.scenario_query = scenario_query
+                st.session_state.scenario_eval = scenario_eval
+                st.session_state.last_eval_log = {"query": scenario_query, "eval_result": scenario_eval, "latency_ms": None, "timestamp": datetime.now().strftime("%H:%M:%S")}
+            if st.session_state.get("scenario_answer"):
+                with st.container(border=True):
+                    st.markdown(f"**{st.session_state.scenario_answer.get('title', 'Your SIP retention plan')}**")
+                    st.markdown(st.session_state.scenario_answer.get("message", ""))
+                    st.caption("Guidance is based on your selected situations and the prototype knowledge base.")
+
         # Dynamic Action Execution Handler
         def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None):
             prog = st.progress(0)
@@ -940,19 +984,6 @@ with tab1:
             st.session_state.action_feedback = feedback_msg
             st.session_state.pipeline_active = True
             st.rerun()
-
-        # Single unified success card after any Execute action
-        if st.session_state.pipeline_active:
-            with st.container():
-                st.markdown("""
-                <div style="background:#0F2620; border:1.5px solid #00D09C; border-radius:12px; padding:18px 22px; margin:16px 0;">
-                    <div style="color:#00D09C; font-weight:700; font-size:1.1rem; margin-bottom:6px;">
-                        Demo simulation completed — no real mandate was changed.
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("📅 Set Reminder for Month 5 Re-evaluation", key="btn_set_reminder"):
-                    st.toast("🎉 Reminder scheduled! Demo reminder saved in this session only; no WhatsApp or SMS will be sent.")
 
         # Action Cards Section with Edge-Case Defenses
         st.markdown("##### Explore a next step")
@@ -972,7 +1003,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
                     handle_action_execution(
-                        "Demo simulation completed — no real mandate was changed.",
+                        "Your selected option has been applied to the prototype SIP plan.",
                         "✅ Request Processed! Upcoming cycle skipped subject to applicable platform, AMC and bank terms. Resumes automatically next month."
                     )
             with col_e2:
@@ -986,7 +1017,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
                     handle_action_execution(
-                        "Demo simulation completed — no real mandate was changed.",
+                        "Your selected option has been applied to the prototype SIP plan.",
                         "✅ Request Processed! 3-Month Emergency Pause activated. Folio existing units remain exposed to market movements."
                     )
 
@@ -1007,8 +1038,8 @@ with tab1:
                     def update_step_down():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "Demo simulation completed — no real mandate was changed.",
-                        f"Demo simulation completed — no real mandate was changed. Monthly commitment adjusted to ₹{step_down_val:,}.",
+                        "Your selected option has been applied to the prototype SIP plan.",
+                        f"Your prototype monthly SIP amount is now ₹{step_down_val:,}.",
                         update_step_down
                     )
 
@@ -1025,8 +1056,8 @@ with tab1:
                     def update_win_win():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "Demo simulation completed — no real mandate was changed.",
-                        f"Demo simulation completed — no real mandate was changed. SIP reduced to ₹{step_down_val:,} for 6 months with auto-step-up scheduled.",
+                        "Your selected option has been applied to the prototype SIP plan.",
+                        f"Your prototype SIP is set to ₹{step_down_val:,}; a return to the original amount is shown as a proposed 6-month step-up.",
                         update_win_win
                     )
 
@@ -1041,11 +1072,11 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
                     handle_action_execution(
-                        "Demo simulation completed — no real mandate was changed.",
-                        "Demo simulation completed — no real mandate was changed. Upcoming cycle skipped; resumes automatically next month."
+                        "Your selected option has been applied to the prototype SIP plan.",
+                        "The upcoming instalment is marked as skipped in your prototype plan."
                     )
 
-        # Free-Form Consultation Desk at bottom of Screen 3
+        # Free-Form Consultation Desk at bottom of AI Retention Engine
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
         st.markdown("#### 💬 Ask custom questions about your SIP:")
         st.caption("Ask any follow-up question regarding your SIP continuity, pause rules, or bank debit policies.")
@@ -1116,6 +1147,7 @@ with tab1:
                     st.markdown(display_output)
                 
                 # ------------------------------------------------------------------------------
+
 # TAB 2: 📊 Dynamic Flexibility & Continuity Simulator
 # ------------------------------------------------------------------------------
 with tab2:
