@@ -660,23 +660,23 @@ Rules:
                 ai_text = (
                     f"Your current monthly commitment is ₹{c_sip:,}, which is already at the platform minimum threshold (₹500-₹1,000).\n\n"
                     f"• Minimum Limit Rule: AMCs enforce a strict ₹500 floor for monthly SIP debits. Stepping down further is technically restricted.\n"
-                    f"• Recommended Action: Execute a Skip for Month 5 with ₹0 Groww penalty, or activate a 3-Month Emergency Pause while preserving 100% of your accumulated folio units in the market!\n\n"
-                    f"Groww SLA Notice: Request changes at least 3 to 7 working days before your due date."
+                    f"• Consider checking whether your platform and AMC allow a temporary pause or amount change. Existing units generally remain invested unless redeemed; their value can rise or fall.\n\n"
+                    f"Check the provider's current cut-off and processing time before relying on a SIP change."
                 )
             elif is_sev:
                 ai_text = (
                     f"🚨 Severe Cash Crunch Detected: Your expense shock (+₹{x_r:,}) meets or exceeds your monthly SIP of ₹{c_sip:,}!\n\n"
                     f"• Auto-Fallback Guardrail: Subtracting expenses leaves ₹0 or less. Groww safeguards block invalid ₹0 step-downs.\n"
-                    f"• Primary Option: Execute Skip Month to cancel the upcoming debit with ₹0 Groww penalty and ₹0 AMC fee.\n"
-                    f"• Secondary Option: Activate a 3-Month Emergency Pause. Your accumulated units stay invested, continuing to compound with NAV growth without straining your bank balance."
+                    f"• Primary Option: Check with your platform and AMC whether the upcoming instalment can still be changed or paused. Bank or provider charges may apply.\n"
+                    f"• Secondary Option: Activate a 3-Month Emergency Pause. Existing units generally remain invested unless redeemed; their value remains subject to market movements."
                 )
             else:
                 ai_text = (
                     f"We understand your monthly expenses just increased by ₹{x_r:,}!\n\n"
                     f"• Option 1: Step-Down to ₹{s_down:,} (Recommended): By reducing your monthly commitment from ₹{c_sip:,} to ₹{s_down:,}, you absorb the household expense shock while keeping your rupee-cost averaging and folio compounding 100% alive!\n"
                     f"• Option 2: Win-Win Auto-Step-Up: Lower to ₹{s_down:,} for 6 months, after which Groww automatically restores your ₹{c_sip:,} SIP.\n"
-                    f"• Option 3: Skip Upcoming Instalment: Skip Month 5 debit with ₹0 Groww penalty and ₹0 AMC fee. Resumes automatically on Month 6.\n\n"
-                    f"Groww SLA Notice: Request changes at least 3 to 7 working days before your due date."
+                    f"• Option 3: Ask your platform whether a one-cycle skip or pause is supported and confirm any applicable charges and restart conditions.\n\n"
+                    f"Check the provider's current cut-off and processing time before relying on a SIP change."
                 )
 
         elif ctx_type == "SALARY_DELAY":
@@ -686,13 +686,13 @@ Rules:
                 f"Your salary arrival shifted to the {x_sal}, while your active AutoPay is scheduled on {c_deb}.\n\n"
                 f"• Recommended Date Shift: To eliminate debit failures and bank bounce fees, move your SIP debit date to 3 days after your {x_sal} salary payout (e.g. 10th of month).\n"
                 f"• Mandate Sync SLA: UPI AutoPay re-alignment takes 3–5 working days for bank clearance.\n"
-                f"• Lead-Time Rule: Ensure you submit this date shift at least 3 to 7 working days prior to the next debit date."
+                f"• Lead-Time Rule: Ensure you submit this date shift at least the provider's current processing window prior to the next debit date."
             )
         elif ctx_type == "AUTOPAY_FAILURE":
             c_sip = lifecycle_context.get("current_sip", 3500)
             ai_text = (
-                f"Take a deep breath—your investment journey and accumulated units remain 100% safe!\n\n"
-                f"• ₹0 Groww Penalty: Groww charges zero penalties or hidden fees for failed AutoPay debits.\n"
+                f"A failed debit does not itself redeem previously allotted units. Their value remains subject to market movements.\n\n"
+                f"• Charges: Your bank or payment provider may apply charges under its account terms. Check the applicable schedule of charges.\n"
                 f"• Zero CIBIL Impact: Mutual fund SIPs are investments, not loan repayments. A failed debit has zero impact on your CIBIL score.\n"
                 f"• Bank Caution: Your bank may charge an ECS bounce charge (~₹250–₹500) for insufficient funds.\n"
                 f"• Instant Recovery: Clear your ₹{c_sip:,} instalment immediately via UPI to ensure continuous unit allotment."
@@ -716,7 +716,7 @@ Rules:
         elif any(w in q_low for w in ["penalty", "fine", "charge", "fee", "cost"]):
             ai_text = (
                 "Groww Zero-Penalty Protection Policy:\n\n"
-                "• ₹0 Groww Penalty: Groww charges absolutely ₹0 fee for any missed, failed, paused, or stepped-down SIP instalment.\n"
+                "• ₹0 Groww Penalty: Charges depend on the platform, bank and payment arrangement. Check the applicable terms.\n"
                 "• AMC Zero-Penalty Rule: Mutual fund houses (AMCs) do not fine investors for missing SIP debits.\n"
                 "• Bank Note: Your bank may levy an internal ECS bounce fee (typically ₹250–₹500) if funds are insufficient, which is why shifting the date or skipping before the debit date is recommended.\n"
                 "• CIBIL Score Safety: Mutual fund investments are not debt obligations. A missed debit never impacts your credit score."
@@ -725,50 +725,50 @@ Rules:
             ai_text = (
                 "SIP Pause Flexibility & Unit Safety:\n\n"
                 "• Complete Unit Safety: When you pause your SIP on Groww, your invested units remain 100% active in your folio, continuing to earn market returns and dividends.\n"
-                "• Pause Duration: You can pause debits for 1 to 6 months. Your underlying AutoPay mandate stays alive.\n"
-                "• Seamless Resumption: Once the pause period concludes, your scheduled debits restart automatically with zero re-registration hassle."
+                "• Pause Duration: Pause availability and duration depend on the platform, AMC and mandate. Confirm current conditions before acting.\n"
+                "• Resumption: Confirm whether the provider restarts automatically or requires a new instruction or mandate."
             )
         elif intent == "AFFORDABILITY":
             ai_text = (
                 "Temporary budget crunches are common, and you do not need to cancel your SIP.\n\n"
                 "• Option 1: Temporary Step-Down (Recommended): Reduce your instalment amount (e.g. down to fund minimum ₹500 or ₹1,000) to keep your compounding habit intact.\n"
-                "• Option 2: Skip Upcoming Instalment: Skip this month's payment without cancelling. Groww and the AMC charge ₹0 penalty. Resumes next month.\n\n"
-                "Remember: Request changes at least 3 to 7 working days before your due date."
+                "• Option 2: Skip Upcoming Instalment: Skip this month's payment without cancelling. Check platform and AMC terms for any charges and confirm how the SIP resumes.\n\n"
+                "Remember: Request changes at least the provider's current processing window before your due date."
             )
         elif intent == "DATE_MISMATCH":
             ai_text = (
                 "Salary dates often change or experience delays. Aligning your SIP date prevents failed debits and bank bounce fees.\n\n"
                 "• Shift AutoPay Date: Move your debit date to 3–5 days after your salary credit date.\n"
                 "• Mandate Sync: UPI AutoPay takes 3–5 working days to re-align, while NetBanking mandates take 7–30 days.\n"
-                "• Lead-Time Rule: Ensure you submit this date shift at least 3 to 7 working days prior to the next debit date."
+                "• Lead-Time Rule: Ensure you submit this date shift at least the provider's current processing window prior to the next debit date."
             )
         elif intent == "PAYMENT_FAILURE":
             ai_text = (
                 "Take a deep breath—your investment journey is completely safe!\n\n"
                 "• Zero Penalty from Groww: Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
                 "• Zero CIBIL Impact: Investment SIPs are not loans or credit cards. A failed debit has zero impact on your CIBIL score.\n"
-                "• Bank Caution: Your bank may charge a small ECS bounce fee if funds were insufficient.\n"
+                "• Bank Caution: Your bank may apply a failed-debit charge under its account terms.\n"
                 "• Instant Recovery: You can immediately pay this instalment using the Pay Now button via UPI."
             )
         elif intent == "PAUSE_RECOVERY":
             ai_text = (
-                "Your invested wealth and accumulated mutual fund units are 100% safe!\n\n"
+                "Pausing future contributions does not itself redeem previously allotted units. Their market value can rise or fall.\n\n"
                 "• When you Pause: Future debits stop for 1 to 6 months. Your existing units stay invested in the market, continuing to compound and earn returns.\n"
-                "• When you Cancel: Your mandate is terminated. Data shows 67% of first-time investors never restart, permanently losing compounding growth.\n"
+                "• When you Cancel: Future contributions stop. Some investors may find restarting difficult, but this project does not claim a population-wide restart rate.\n"
                 "• Recommendation: Choose 'Pause' instead of 'Cancel' if you need a break."
             )
         else:
             ai_text = (
                 "Groww provides flexible SIP management so you never have to break your long-term compounding journey.\n\n"
-                "• Lead-Time Rule: Any modification (date shift, pause, step-down, or skip) requires 3 to 7 working days to take effect at the AMC.\n"
-                "• ₹0 Penalty Policy: Groww charges ₹0 fee for missed, paused, or modified SIP instalments.\n"
+                "• Processing: Modification timelines vary by platform, AMC, bank, payment method and cut-off. Verify the current timeline with the provider.\n"
+                "• ₹0 Penalty Policy: Charges and availability depend on the platform, AMC and bank.\n"
                 "• Flexibility First: You can pause for up to 6 months or step down rather than cancelling."
             )
 
     action_cards = [
         {"id": "step_down", "label": "✏️ Step-Down SIP", "desc": "Reduce monthly commitment to absorb financial shock."},
         {"id": "win_win", "label": "🚀 Win-Win: Step-Down + Auto-Step-Up", "desc": "Reduces SIP today, auto-restores to original amount in 6 months."},
-        {"id": "skip", "label": "⏭️ Skip Next Instalment", "desc": "Pauses 1 upcoming cycle with guaranteed ₹0 penalty."}
+        {"id": "skip", "label": "⏭️ Skip Next Instalment", "desc": "Pauses 1 upcoming cycle with subject to applicable platform, AMC and bank terms."}
     ]
 
     return {
@@ -803,7 +803,7 @@ st.markdown("""
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
         <span class="groww-tag">NextLeap Capstone MVP</span>
-        <span class="badge-pass">₹0 Penalty Policy</span>
+        <span class="badge-pass">SIP Continuity Prototype</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1163,7 +1163,7 @@ with tab1:
                 <b style="color:#F2994A; font-size:15px;">NPCI & AMC Lead-Time Protection Notice:</b>
             </div>
             <div style="margin-top:6px; font-size:14px; color:#FFFFFF;">
-                Modifications (step-down, debit date shift, skip, or pause) take <b>3 to 7 working days</b> to reflect at your AMC registers. Submitting early prevents unexpected debit attempts.
+                Processing times for modifications depend on the platform, AMC, bank, payment method and request cut-off. Confirm the current timeline before relying on a change.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1213,21 +1213,21 @@ with tab1:
                 if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
                     handle_action_execution(
                         "Demo simulation completed — no real mandate was changed.",
-                        "✅ Request Processed! Upcoming cycle skipped with ₹0 Groww penalty. Resumes automatically next month."
+                        "✅ Request Processed! Upcoming cycle skipped subject to applicable platform, AMC and bank terms. Resumes automatically next month."
                     )
             with col_e2:
                 st.markdown("""
                 <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
                     <div>
                         <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏸️ 3-Month Emergency Pause</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Suspends debits for 3 months while income recovers. Zero penalty, units 100% safe.</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Suspends debits for 3 months while income recovers. Zero penalty, existing units generally remain invested unless redeemed; market value can rise or fall.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
                     handle_action_execution(
                         "Demo simulation completed — no real mandate was changed.",
-                        "✅ Request Processed! 3-Month Emergency Pause activated. Folio units continue compounding."
+                        "✅ Request Processed! 3-Month Emergency Pause activated. Folio existing units remain exposed to market movements."
                     )
 
         else:
@@ -1275,7 +1275,7 @@ with tab1:
                 <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
                     <div>
                         <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
-                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle with guaranteed ₹0 penalty.</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle with subject to applicable platform, AMC and bank terms.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
