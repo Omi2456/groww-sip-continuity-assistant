@@ -805,7 +805,6 @@ with tab1:
         """, unsafe_allow_html=True)
 
         if st.button("Create SIP profile", type="primary", use_container_width=True):
-            with st.spinner("Preparing your SIP profile..."):
             st.session_state.active_sip = {
                 "original_amount": chosen_amt,
                 "fund": chosen_scheme,
@@ -984,6 +983,7 @@ with tab1:
                     st.session_state.active_sip["status"] = "Adjusted"
                     st.session_state.action_feedback = f"Monthly SIP contribution updated: ₹{old_amount:,} → ₹{affordable:,}."
                     st.session_state.last_action = "step_down"
+                    st.toast(st.session_state.action_feedback, icon="✅")
                     st.rerun()
         if "SALARY_DELAY" in selected_scenarios:
             with action_cols[1]:
@@ -993,6 +993,7 @@ with tab1:
                     st.session_state.active_sip["debit_date"] = planned_date
                     st.session_state.action_feedback = f"Preferred debit date updated in your plan: {planned_date}."
                     st.session_state.last_action = "date_change"
+                    st.toast(st.session_state.action_feedback, icon="✅")
                     st.rerun()
         if "AUTOPAY_FAILURE" in selected_scenarios:
             with action_cols[2]:
@@ -1000,10 +1001,8 @@ with tab1:
                     st.session_state.active_sip["payment_status"] = "Reviewed"
                     st.session_state.action_feedback = "Payment issue marked as reviewed. No bank retry or mandate change was sent."
                     st.session_state.last_action = "payment_review"
+                    st.toast(st.session_state.action_feedback, icon="✅")
                     st.rerun()
-
-        if st.session_state.get("action_feedback"):
-            st.success(st.session_state.action_feedback)
 
         if "CASH_FLOW_SHOCK" in selected_scenarios and int(context.get("calculated_step_down",500)) >= 500:
             original = int(sip.get("original_amount", sip.get("amount",500)))
