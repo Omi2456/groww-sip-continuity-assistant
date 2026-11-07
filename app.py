@@ -836,10 +836,14 @@ with tab1:
 
         sip = st.session_state.active_sip
 
-        # Active SIP Summary Card
+        # Active SIP Summary Card — values are simulated demo data.
         with st.container(border=True):
-            st.markdown(f"**{grounded_res.get('title', 'SIP continuity guidance')}**")
-            st.markdown(grounded_res["message"])
+            st.markdown("#### Your SIP at a glance")
+            summary_cols = st.columns(3)
+            summary_cols[0].metric("Monthly SIP", f"₹{sip['amount']:,}")
+            summary_cols[1].metric("Total invested", f"₹{sip['total_invested']:,}")
+            summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
+            st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
         # PM Behavioral Retention Nudge (Loss-Aversion Card)
         st.markdown("""
