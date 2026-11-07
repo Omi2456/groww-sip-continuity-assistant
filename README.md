@@ -17,9 +17,10 @@ The app also retains the flexibility simulator and AI quality/evidence tab.
 - **Provider:** Groq, through its OpenAI-compatible API.
 - **Default model:** `openai/gpt-oss-20b`.
 - **Endpoint:** `https://api.groq.com/openai/v1`.
-- **Safety gate:** deterministic local checks run before any model request.
-- **Grounded generation:** one Groq chat-completion request for an allowed query, using the project knowledge base and scenario context.
-- **Fallback:** if the key is missing or Groq is unavailable, the deterministic local response path remains available.
+- **Step 3 retention reasoning:** one Groq chat-completion request interprets all selected disruption scenarios together, uses the simulated SIP profile and project knowledge base, and generates a personalised comparison of Step-Down, Win-Win and Skip options.
+- **Custom questions:** a separate Groq request answers user-submitted SIP education and continuity questions.
+- **Deterministic controls:** Python handles SIP calculations, input validation, scenario facts, action state and compliance checks; the model is instructed not to calculate portfolio values or invent provider rules.
+- **Caching and fallback:** the Step 3 assessment is stored in Streamlit session state to avoid repeated calls on reruns. If the key is missing or Groq is unavailable, a local rules-based explanation remains available.
 
 The safety gate is a first-pass prototype control, not a certified compliance system. It should be evaluated with the supplied test set and adversarial prompts.
 
@@ -82,7 +83,7 @@ These tests verify local guardrail and fallback behaviour. They do **not** measu
 Deploy this branch as a separate Streamlit app:
 
 - Repository: `Omi2456/groww-sip-continuity-assistant`
-- Branch: `groq-upgrade`
+- Branch: `ai-native-retention-engine`
 - Main file: `app.py`
 
 Add the three Groq settings in the **new app's** Streamlit Secrets. Do not change the existing deployment's branch or secrets.
