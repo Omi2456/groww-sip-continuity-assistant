@@ -909,22 +909,23 @@ with tab1:
             st.session_state.current_screen = 3
             st.rerun()
 
-        # PM Behavioral Retention Nudge (Loss-Aversion Card)
-        st.markdown("""
-        <div style="background:#181B20; border:1px solid #2B313A; border-radius:12px; padding:14px 16px; margin:12px 0;">
-            <div style="font-weight:700; color:#E0E0E0; font-size:15px; margin-bottom:12px;">📊 The True Cost of Inaction vs. Smart Flexibility:</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-                <div style="background:#26181B; border:1px solid #FF4C4C; border-radius:10px; padding:14px;">
-                    <div style="color:#FF4C4C; font-weight:700; font-size:14px; margin-bottom:4px;">❌ Cancel SIP Today</div>
-                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Potential long-term contribution gap</div>
-                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">Some investors find it difficult to restart after stopping; this is a behavioural risk, not a measured prediction.</div>
-                </div>
-                <div style="background:#0F2620; border:1px solid #00D09C; border-radius:10px; padding:14px;">
-                    <div style="color:#00D09C; font-weight:700; font-size:14px; margin-bottom:4px;">✅ Step-Down Today</div>
-                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Keeps a contribution habit possible</div>
-                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">A smaller contribution may be more manageable, depending on your circumstances.</div>
-                </div>
+        # Retention-first nudge: show the contribution gap without encouraging cancellation.
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#25191C,#152A25);border:1px solid #00D09C;border-radius:14px;padding:16px;margin:14px 0;">
+          <div style="font-weight:800;color:#F2B84B;font-size:16px;margin-bottom:10px;">📊 KEEP YOUR SIP MOMENTUM</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:#26181B;border:1px solid #A94A52;border-radius:10px;padding:12px;">
+              <div style="color:#FF7777;font-weight:700;">If contributions stop</div>
+              <div style="color:#FFFFFF;font-size:20px;font-weight:800;">₹{int(sip["amount"])*6:,}</div>
+              <div style="color:#C6C9CE;font-size:12px;">Potential contributions missed over 6 months</div>
             </div>
+            <div style="background:#0F2620;border:1px solid #00D09C;border-radius:10px;padding:12px;">
+              <div style="color:#00D09C;font-weight:700;">If you step down to ₹{step_down_val:,}</div>
+              <div style="color:#FFFFFF;font-size:20px;font-weight:800;">₹{step_down_val*6:,}</div>
+              <div style="color:#C6C9CE;font-size:12px;">Contributions maintained over 6 months</div>
+            </div>
+          </div>
+          <div style="color:#D4D8DC;font-size:12px;margin-top:10px;">Illustrative contribution comparison only — not a prediction of investment returns or portfolio loss. Continue only with an amount that fits your essential expenses.</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1210,7 +1211,7 @@ with tab2:
         + calculate_sip_wealth(current_sip, total_months - step_down_months, r_monthly)
     )
 
-    # 4. Outright Cancellation
+    # 4. No-further-contribution comparison (not a recommended action)
     invested_months_cancel = 12
     total_invested_cancel = current_sip * invested_months_cancel
     wealth_cancel = calculate_sip_wealth(current_sip, invested_months_cancel, r_monthly) * ((1 + r_monthly) ** (total_months - invested_months_cancel))
@@ -1252,7 +1253,7 @@ with tab2:
             gap_lakhs = (wealth_full - wealth_cancel) / 100000
             st.markdown(f"""
             <div class="metric-box" style="border-color:#FF4C4C;">
-                <div class="metric-label" style="color:#FF4C4C;">Outright Cancel</div>
+                <div class="metric-label" style="color:#FF4C4C;">No New Contributions</div>
                 <div class="metric-val" style="color:#FF4C4C;">₹{wealth_cancel/100000:.2f} L</div>
                 <div style="font-size:0.8rem; color:#FF4C4C; font-weight:600;">-₹{gap_lakhs:.2f} L Loss!</div>
             </div>
