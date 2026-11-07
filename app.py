@@ -576,7 +576,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             "type": "COMPLIANCE_VIOLATION",
             "title": "⚠️ Compliance Safeguard Triggered",
             "message": clean_ai_formatting(
-                "Under SEBI regulations and Groww's Customer Safety Guidelines, the SIP Continuity Assistant "
+                "Under SEBI regulations and the prototype's safety guidelines, the SIP Continuity Assistant "
                 "cannot provide stock/fund recommendations, predict market returns, or suggest specific investment purchases. "
                 "Our assistant is dedicated strictly to helping you manage your active SIP schedules, avoid accidental cancellations, "
                 "and maintain your compounding journey through budget flexibilities."
@@ -694,7 +694,7 @@ Rules:
             ai_text = (
                 f"A failed debit does not itself redeem previously allotted units. Their value remains subject to market movements.\n\n"
                 f"• Charges: Your bank or payment provider may apply charges under its account terms. Check the applicable schedule of charges.\n"
-                f"• Zero CIBIL Impact: Mutual fund SIPs are investments, not loan repayments. A failed debit has zero impact on your CIBIL score.\n"
+                f"• Credit reporting: Do not assume a universal outcome; check your bank/payment arrangement if you are concerned about reporting.\n"
                 f"• Bank Caution: Your bank may apply a failed-debit charge under its account terms; check its schedule of charges.\n"
                 f"• Instant Recovery: Clear your ₹{c_sip:,} instalment immediately via UPI to ensure continuous unit allotment."
             )
@@ -717,7 +717,7 @@ Rules:
         elif any(w in q_low for w in ["penalty", "fine", "charge", "fee", "cost"]):
             ai_text = (
                 "Groww Zero-Penalty Protection Policy:\n\n"
-                "• ₹0 Groww Penalty: Charges depend on the platform, bank and payment arrangement. Check the applicable terms.\n"
+                "• Charges: These depend on the platform, bank and payment arrangement. Check the applicable terms.\n"
                 "• AMC Zero-Penalty Rule: Mutual fund houses (AMCs) do not fine investors for missing SIP debits.\n"
                 "• Bank Note: Your bank may levy an internal ECS bounce fee (typically ₹250–₹500) if funds are insufficient, which is why shifting the date or skipping before the debit date is recommended.\n"
                 "• CIBIL Score Safety: Mutual fund investments are not debt obligations. A missed debit never impacts your credit score."
@@ -747,7 +747,7 @@ Rules:
             ai_text = (
                 "Take a deep breath—your investment journey is completely safe!\n\n"
                 "• Zero Penalty from Groww: Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
-                "• Zero CIBIL Impact: Investment SIPs are not loans or credit cards. A failed debit has zero impact on your CIBIL score.\n"
+                "• Credit reporting: Do not assume a universal outcome; check your bank/payment arrangement if you are concerned about reporting.\n"
                 "• Bank Caution: Your bank may apply a failed-debit charge under its account terms.\n"
                 "• Instant Recovery: Check the app or payment provider for currently available recovery options."
             )
