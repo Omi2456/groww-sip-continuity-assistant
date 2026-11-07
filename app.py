@@ -1089,8 +1089,8 @@ STRICT SAFETY:
                         st.markdown(line)
                     st.markdown("#### Which continuity option may fit?")
                     st.markdown(
-                        f"- **Step-Down to ₹{step_down_val:,}:** Consider if this amount fits after essential expenses.\\n"
-                        "- **Win-Win:** A proposed reduced contribution with a month-5 review before a possible month-6 restoration.\\n"
+                        f"- **Step-Down to ₹{step_down_val:,}:** Consider if this amount fits after essential expenses.\n"
+                        "- **Win-Win:** A proposed reduced contribution with a month-5 review before a possible month-6 restoration.\n"
                         "- **Skip Next Instalment:** Consider only for a temporary one-cycle issue or while resolving a debit problem."
                     )
                     st.info("Starting point: prioritise an affordable contribution or resolve the payment/date issue. Do not force an amount that your budget cannot support.")
