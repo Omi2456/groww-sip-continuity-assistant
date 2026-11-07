@@ -29,7 +29,7 @@ st.set_page_config(
     page_title="Groww SIP Continuity Assistant",
     page_icon="🌱",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Groq configuration (environment variables or Streamlit secrets).
@@ -459,8 +459,8 @@ with st.sidebar:
     # Toggle exactly without "(For Mentors)"
     audit_mode = st.toggle(
         "🛡️ Show Live Eval Gate Audit Logs",
-        value=True,
-        help="Real-time compliance classification, safety gates, and confidence scores."
+        value=False,
+        help="Optional technical details for evaluation and demonstration."
     )
     
     st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
@@ -519,43 +519,39 @@ def get_groq_client(api_key: str):
 
 
 def offline_compliance_guard(query: str) -> dict:
-    """
-    Deterministic rule-based compliance evaluator & fallback.
-    Prevents false negatives on SEBI compliance checks.
-    """
-    q_lower = query.lower()
-    
-    unallowed_phrases = [
-        "which fund", "which stock", "best stock", "top stock", "recommend a fund",
+    """Fast, transparent intent and safety pre-check; scores are not calibrated confidence."""
+    q = (query or "").lower().strip()
+
+    advisory_terms = [
+        "which fund", "which stock", "best stock", "recommend a fund",
         "recommend fund", "should i buy", "which small cap", "best mutual fund",
-        "guarantee", "guaranteed", "double my money", "f&o", "options trading",
-        "crypto", "tata motors", "reliance", "hdi", "nifty 50 will give 20%",
-        "market crashed", "panic sell", "redeem all", "sell all my mutual funds"
+        "guaranteed return", "guarantee my return", "double my money",
+        "options trading", "crypto", "panic sell", "redeem all"
     ]
-    
-    is_violation = any(phrase in q_lower for phrase in unallowed_phrases)
-    if is_violation:
+    if any(term in q for term in advisory_terms):
         return {
             "is_compliant": False,
-            "confidence_score": 0.99,
-            "violation_reason": "Query requests investment advice, fund/stock recommendations, or return guarantees (SEBI Non-Advisory Shield).",
+            "confidence_score": None,
+            "violation_reason": "The request seeks a specific investment recommendation or guaranteed outcome.",
             "detected_intent": "UNALLOWED_ADVICE"
         }
-    
-    if any(k in q_lower for k in ["afford", "can't pay", "cannot afford", "step down", "step-down", "reduce", "skip", "money tight", "medical", "rent"]):
+
+    if any(k in q for k in ["summary", "summarise", "summarize", "snapshot", "my sip details", "portfolio overview"]):
+        intent = "SIP_SUMMARY"
+    elif any(k in q for k in ["afford", "can't pay", "cannot afford", "step down", "step-down", "reduce", "skip", "money tight", "medical", "rent", "budget"]):
         intent = "AFFORDABILITY"
-    elif any(k in q_lower for k in ["salary", "date", "delay", "autopay date", "shift", "mandate", "deducted"]):
+    elif any(k in q for k in ["salary", "debit date", "date shift", "date mismatch", "payday", "mandate date"]):
         intent = "DATE_MISMATCH"
-    elif any(k in q_lower for k in ["fail", "failed", "penalty", "penalized", "cibil", "credit score", "bounce", "pay now", "upi"]):
+    elif any(k in q for k in ["fail", "failed", "penalty", "penalized", "cibil", "credit score", "bounce", "autopay", "upi"]):
         intent = "PAYMENT_FAILURE"
-    elif any(k in q_lower for k in ["pause", "cancel", "safe", "units", "lose", "lost", "compounding", "resume"]):
+    elif any(k in q for k in ["pause", "cancel", "safe", "units", "lose", "lost", "resume", "stop sip"]):
         intent = "PAUSE_RECOVERY"
     else:
         intent = "GENERAL"
-        
+
     return {
         "is_compliant": True,
-        "confidence_score": 0.96,
+        "confidence_score": None,
         "violation_reason": None,
         "detected_intent": intent
     }
@@ -566,223 +562,119 @@ def run_eval_gate(user_query: str, api_key: str = GROQ_API_KEY, model_name: str 
 
 
 def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = GROQ_API_KEY, model_name: str = DEFAULT_MODEL, lifecycle_context: dict = None) -> dict:
-    """
-    Generate grounded response adhering to official Groww rules, with upgraded smart fallback.
-    """
+    """Create concise, context-aware SIP continuity guidance with a safe local fallback."""
     intent = eval_result.get("detected_intent", "GENERAL")
-    
-    if not eval_result.get("is_compliant", False) or eval_result.get("confidence_score", 0) < 0.75:
+    ctx = lifecycle_context or {}
+
+    if not eval_result.get("is_compliant", False):
         return {
             "type": "COMPLIANCE_VIOLATION",
-            "title": "⚠️ Compliance Safeguard Triggered",
-            "message": clean_ai_formatting(
-                "Under SEBI regulations and the prototype's safety guidelines, the SIP Continuity Assistant "
-                "cannot provide stock/fund recommendations, predict market returns, or suggest specific investment purchases. "
-                "Our assistant is dedicated strictly to helping you manage your active SIP schedules, avoid accidental cancellations, "
-                "and maintain your compounding journey through budget flexibilities."
-            ),
-            "citations": [
-                {"title": "SEBI Investor Education", "url": "https://investor.sebi.gov.in"},
-                {"title": "Groww Mutual Funds Help Center", "url": "https://groww.in/help/mutual-funds"}
-            ],
+            "title": "Investment-advice request not supported",
+            "message": "I can help explain SIP continuity, affordability and payment-process questions, but I can't recommend a fund, predict returns or guarantee an investment outcome. I can still help you compare contribution and pause scenarios.",
+            "citations": [],
             "action_cards": []
         }
 
+    # A summary is deterministic: it must use the simulated account, not ask an LLM to invent account data.
+    if intent == "SIP_SUMMARY":
+        sip = ctx.get("portfolio") or ctx
+        if not sip:
+            return {
+                "type": "SUCCESS",
+                "title": "Your SIP summary",
+                "message": "I don't have a simulated SIP profile yet. Complete the Setup SIP step first, then ask for your SIP summary.",
+                "action_cards": []
+            }
+        amount = int(sip.get("amount", sip.get("current_sip", 0)) or 0)
+        invested = int(sip.get("total_invested", amount * int(sip.get("instalments_paid", 0))) or 0)
+        value = int(sip.get("current_value", invested) or invested)
+        instalments = int(sip.get("instalments_paid", 0) or 0)
+        gain = value - invested
+        gain_pct = (gain / invested * 100) if invested else 0
+        message = (
+            f"### Your SIP at a glance\n"
+            f"- **Scheme:** {sip.get('fund', 'Illustrative scheme')}\n"
+            f"- **Monthly contribution:** ₹{amount:,}\n"
+            f"- **Instalments completed:** {instalments}\n"
+            f"- **Total invested:** ₹{invested:,}\n"
+            f"- **Illustrative current value:** ₹{value:,}\n"
+            f"- **Illustrative change:** {'+' if gain >= 0 else '-'}₹{abs(gain):,} ({gain_pct:+.1f}%)\n"
+            f"- **Next scheduled debit:** {sip.get('debit_date', 'Not set')}\n\n"
+            f"**What this means:** Your existing units remain invested unless redeemed. Their value can rise or fall with the market. "
+            f"This is a simulated portfolio snapshot, not live Groww account data."
+        )
+        return {"type": "SUCCESS", "title": "Your SIP summary", "message": message, "action_cards": []}
+
+    # Local fallback stays factual and short when the API is unavailable.
+    fallback = {
+        "AFFORDABILITY": "A temporary reduction or pause may be worth exploring if your budget has changed. First decide what you can comfortably afford after essential expenses. Whether an SIP can be modified or paused, and the applicable cut-off or charges, depends on the platform, AMC and payment arrangement. Existing units are not automatically redeemed.",
+        "DATE_MISMATCH": "Your salary date and SIP debit date may be out of sync. Check whether the platform and mandate support a date change and whether the next debit is still within the change cut-off. Do not assume a change will take effect for the next instalment; confirm the effective date with the provider.",
+        "PAYMENT_FAILURE": "A failed debit does not itself redeem units that were already allotted. Check the failure reason in your payment or platform record, then review your bank's schedule of charges and the provider's instructions before retrying. Fees and retry options vary.",
+        "PAUSE_RECOVERY": "Stopping future SIP instalments does not automatically sell your existing units. Their value remains exposed to market movements. Pause, cancellation and restart options depend on the platform, AMC and mandate terms; check the applicable conditions before choosing.",
+        "GENERAL": "I can help with SIP continuity, affordability, debit-date and payment-failure questions. Tell me what changed (for example, your available monthly budget, salary date or debit failure), and I'll compare the relevant options. Platform-specific rules are not assumed by this prototype."
+    }
+
     client = get_groq_client(api_key)
-    ai_text = None
-    ctx_type = lifecycle_context.get("type") if lifecycle_context else None
-
     if client:
-        grounding_context = json.dumps(GROWW_SIP_KNOWLEDGE_BASE, ensure_ascii=False, indent=2)
-        ctx_details = ""
-        if lifecycle_context:
-            ctx_details = f"""
-SIMULATED LIFE-EVENT CONTEXT (illustrative, not a real account):
-- Trigger Event: {lifecycle_context.get('type')}
-- Current Monthly SIP: ₹{lifecycle_context.get('current_sip')}
-- Current Debit Date: {lifecycle_context.get('current_debit_date')}
-- Rent/Expense Increase: ₹{lifecycle_context.get('x_rent', 0)}
-- New Salary Date: {lifecycle_context.get('x_salary_date', '')}
-- Calculated Step-Down Value: ₹{lifecycle_context.get('calculated_step_down', 0)}
-- Is Low SIP: {lifecycle_context.get('is_low_sip', False)}
-- Is Severe Crunch: {lifecycle_context.get('is_severe_crunch', False)}
-"""
-        prompt = f"""
-You are a careful SIP continuity education assistant. This is an independent product prototype, not an official Groww service.
+        portfolio = ctx.get("portfolio", {})
+        context_lines = []
+        if portfolio:
+            context_lines = [
+                f"Scheme: {portfolio.get('fund', 'Illustrative scheme')}",
+                f"Monthly SIP: ₹{portfolio.get('amount', 0)}",
+                f"Instalments completed: {portfolio.get('instalments_paid', 0)}",
+                f"Total invested: ₹{portfolio.get('total_invested', 0)}",
+                f"Illustrative current value: ₹{portfolio.get('current_value', 0)}",
+                f"Debit date: {portfolio.get('debit_date', 'Not set')}"
+            ]
+        if ctx:
+            context_lines.extend([
+                f"Scenario: {ctx.get('type', 'Not specified')}",
+                f"Expense increase: ₹{ctx.get('x_rent', 0)}",
+                f"Salary date: {ctx.get('x_salary_date', 'Not specified')}",
+                f"Illustrative affordable contribution: ₹{ctx.get('calculated_step_down', 'Not calculated')}"
+            ])
+        kb = json.dumps(GROWW_SIP_KNOWLEDGE_BASE, ensure_ascii=False)
+        prompt = f"""You are an independent SIP continuity education assistant in a prototype, not Groww support.
+Detected intent: {intent}
+User question: {user_query}
+Simulated account/scenario context (use only if supplied): {'; '.join(context_lines) or 'No account context supplied'}
+Knowledge base: {kb}
 
-KNOWLEDGE BASE (treat source-backed statements as authoritative; if a detail is absent or uncertain, say so):
-{grounding_context}
-{ctx_details}
+Answer in at most 140 words, using this structure:
+1. One sentence acknowledging the user's situation.
+2. Up to three relevant options or steps, only when useful.
+3. One short "What to verify" note if platform/bank/AMC policy is involved.
 
-USER QUERY:
-{user_query}
-
-DETECTED INTENT: {intent}
-
-Respond in clear, concise language with practical next steps. Be empathetic but never pressure the user to continue investing.
 Rules:
-- Do not recommend specific funds, securities, or investment products.
-- Do not guarantee returns, penalty outcomes, credit-score outcomes, mandate timings, or SIP modification availability.
-- Distinguish general mutual-fund concepts from platform-, AMC-, and bank-specific rules.
-- If a rule is not supported by the knowledge base, explicitly say the user should verify it with Groww, their AMC, or bank.
-- Existing units generally remain invested unless the investor redeems them; do not imply that pausing future SIP debits changes existing holdings.
-- Describe Step-Down + Auto-Step-Up as a proposed product concept, not a currently available Groww feature.
-- Explain that all actions shown in this prototype are simulations; no real SIP, mandate, reminder, bank payment, or NPCI request is executed.
-- If a simulated scenario is supplied, use its figures but label them illustrative.
-"""
+- Never invent Groww screen names, menu paths, pause durations, fees, minimums, cut-offs, processing times, bank charges or credit-score outcomes.
+- If the knowledge base does not establish a platform-specific fact, say it is not verified and direct the user to confirm it; do not fabricate instructions.
+- Do not tell users they must continue investing. Respect that stopping may be appropriate.
+- Existing units are not automatically redeemed when future contributions stop; market value can rise or fall.
+- Step-Down + Auto-Step-Up is a proposed concept, not a confirmed Groww feature.
+- All account details and actions in this app are simulations, not live transactions.
+- Use concise Markdown bullets. No tables, long introductions or repeated disclaimers."""
         try:
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "You provide grounded, non-advisory SIP lifecycle education. Follow the supplied safety rules and do not invent platform policies."},
+                    {"role": "system", "content": "Be concise, neutral, evidence-bound and user-centred. Never invent platform-specific rules."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
-                max_completion_tokens=700,
-                reasoning_effort="low"
+                temperature=0.2,
+                max_completion_tokens=450
             )
-            ai_text = (response.choices[0].message.content or "").strip() or None
+            answer = (response.choices[0].message.content or "").strip()
+            if answer:
+                return {"type": "SUCCESS", "title": "SIP continuity guidance", "message": answer, "action_cards": []}
         except Exception:
-            ai_text = None
-
-    # Upgraded Smart Q&A Fallback Engine (prevents repeating identical responses)
-    if not ai_text:
-        q_low = user_query.lower()
-        
-        # Lifecycle dynamic contexts
-        if ctx_type == "CASH_FLOW_SHOCK":
-            c_sip = lifecycle_context.get("current_sip", 3500)
-            x_r = lifecycle_context.get("x_rent", 1500)
-            is_low = lifecycle_context.get("is_low_sip", False)
-            is_sev = lifecycle_context.get("is_severe_crunch", False)
-            s_down = lifecycle_context.get("calculated_step_down", 2000)
-
-            if is_low:
-                ai_text = (
-                    f"Your current monthly commitment is ₹{c_sip:,}, which is already at the platform minimum threshold (₹500-₹1,000).\n\n"
-                    f"• Minimum Limit Rule: AMCs enforce a strict ₹500 floor for monthly SIP debits. Stepping down further is technically restricted.\n"
-                    f"• Consider checking whether your platform and AMC allow a temporary pause or amount change. Existing units generally remain invested unless redeemed; their value can rise or fall.\n\n"
-                    f"Check the provider's current cut-off and processing time before relying on a SIP change."
-                )
-            elif is_sev:
-                ai_text = (
-                    f"🚨 Severe Cash Crunch Detected: Your expense shock (+₹{x_r:,}) meets or exceeds your monthly SIP of ₹{c_sip:,}!\n\n"
-                    f"• Auto-Fallback Guardrail: Subtracting expenses leaves ₹0 or less. Groww safeguards block invalid ₹0 step-downs.\n"
-                    f"• Primary Option: Check with your platform and AMC whether the upcoming instalment can still be changed or paused. Bank or provider charges may apply.\n"
-                    f"• Secondary Option: Activate a 3-Month Emergency Pause. Existing units generally remain invested unless redeemed; their value remains subject to market movements."
-                )
-            else:
-                ai_text = (
-                    f"We understand your monthly expenses just increased by ₹{x_r:,}!\n\n"
-                    f"• Option 1: Step-Down to ₹{s_down:,} (Recommended): By reducing your monthly commitment from ₹{c_sip:,} to ₹{s_down:,}, you absorb the household expense shock while keeping your rupee-cost averaging and folio compounding 100% alive!\n"
-                    f"• Option 2: Win-Win Auto-Step-Up: Lower to ₹{s_down:,} for 6 months, after which Groww automatically restores your ₹{c_sip:,} SIP.\n"
-                    f"• Option 3: Ask your platform whether a one-cycle skip or pause is supported and confirm any applicable charges and restart conditions.\n\n"
-                    f"Check the provider's current cut-off and processing time before relying on a SIP change."
-                )
-
-        elif ctx_type == "SALARY_DELAY":
-            x_sal = lifecycle_context.get("x_salary_date", "7th")
-            c_deb = lifecycle_context.get("current_debit_date", "3rd of month")
-            ai_text = (
-                f"Your salary arrival shifted to the {x_sal}, while your active AutoPay is scheduled on {c_deb}.\n\n"
-                f"• Recommended Date Shift: To eliminate debit failures and bank bounce fees, move your SIP debit date to 3 days after your {x_sal} salary payout (e.g. 10th of month).\n"
-                f"• Mandate Sync SLA: UPI AutoPay re-alignment takes 3–5 working days for bank clearance.\n"
-                f"• Lead-Time Rule: Ensure you submit this date shift at least the provider's current processing window prior to the next debit date."
-            )
-        elif ctx_type == "AUTOPAY_FAILURE":
-            c_sip = lifecycle_context.get("current_sip", 3500)
-            ai_text = (
-                f"A failed debit does not itself redeem previously allotted units. Their value remains subject to market movements.\n\n"
-                f"• Charges: Your bank or payment provider may apply charges under its account terms. Check the applicable schedule of charges.\n"
-                f"• Credit reporting: Do not assume a universal outcome; check your bank/payment arrangement if you are concerned about reporting.\n"
-                f"• Bank Caution: Your bank may apply a failed-debit charge under its account terms; check its schedule of charges.\n"
-                f"• Instant Recovery: Clear your ₹{c_sip:,} instalment immediately via UPI to ensure continuous unit allotment."
-            )
-
-        # Smart fallback differentiation for free-form queries
-        elif any(w in q_low for w in ["return", "profit", "gain", "interest", "xirr", "cagr"]):
-            ai_text = (
-                "Understanding Returns & Compounding Continuity:\n\n"
-                "• Compounding Engine: Mutual fund returns are market-linked via daily NAV appreciation. Pausing or stepping down preserves all accumulated units, allowing them to participate fully in subsequent market rallies.\n"
-                "• Rupee-Cost Averaging: Continuing even a modest ₹500 or ₹1,000 SIP during market volatility buys more units when prices dip, driving superior long-term XIRR.\n"
-                "• Avoid Full Cancellation: Dropping out permanently breaks compounding. A 10-year disciplined investor retains over 82% of total wealth creation even with temporary step-downs!"
-            )
-        elif any(w in q_low for w in ["bank", "bounce", "mandate", "enach", "nach", "autopay"]):
-            ai_text = (
-                "Bank Mandates & AutoPay Processing Details:\n\n"
-                "• NPCI eNACH Processing: Your SIP AutoPay operates through NPCI's automated clearing mandate. Modifying dates or linked accounts requires bank re-validation.\n"
-                "• Processing SLAs: UPI AutoPay changes reflect in 3 to 5 business days; netbanking / debit card eNACH mandates can require 7 to 30 days.\n"
-                "• Bank Bounce Prevention: Always set your SIP date 3 to 5 days AFTER your expected salary credit date to ensure cleared funds are ready."
-            )
-        elif any(w in q_low for w in ["penalty", "fine", "charge", "fee", "cost"]):
-            ai_text = (
-                "Groww Zero-Penalty Protection Policy:\n\n"
-                "• Charges: These depend on the platform, bank and payment arrangement. Check the applicable terms.\n"
-                "• AMC Zero-Penalty Rule: Mutual fund houses (AMCs) do not fine investors for missing SIP debits.\n"
-                "• Bank Note: Your bank may levy an internal ECS bounce fee (typically ₹250–₹500) if funds are insufficient, which is why shifting the date or skipping before the debit date is recommended.\n"
-                "• CIBIL Score Safety: Mutual fund investments are not debt obligations. A missed debit never impacts your credit score."
-            )
-        elif any(w in q_low for w in ["pause", "hold", "stop", "freeze", "resume"]):
-            ai_text = (
-                "SIP Pause Flexibility & Unit Safety:\n\n"
-                "• Complete Unit Safety: When you pause your SIP on Groww, your invested units remain 100% active in your folio, continuing to earn market returns and dividends.\n"
-                "• Pause Duration: Pause availability and duration depend on the platform, AMC and mandate. Confirm current conditions before acting.\n"
-                "• Resumption: Confirm whether the provider restarts automatically or requires a new instruction or mandate."
-            )
-        elif intent == "AFFORDABILITY":
-            ai_text = (
-                "Temporary budget crunches are common, and you do not need to cancel your SIP.\n\n"
-                "• Option 1: Temporary Step-Down (Recommended): Reduce your instalment amount (e.g. down to fund minimum ₹500 or ₹1,000) to keep your compounding habit intact.\n"
-                "• Option 2: Skip Upcoming Instalment: Skip this month's payment without cancelling. Check platform and AMC terms for any charges and confirm how the SIP resumes.\n\n"
-                "Remember: Request changes at least the provider's current processing window before your due date."
-            )
-        elif intent == "DATE_MISMATCH":
-            ai_text = (
-                "Salary dates often change or experience delays. Aligning your SIP date prevents failed debits and bank bounce fees.\n\n"
-                "• Shift AutoPay Date: Move your debit date to 3–5 days after your salary credit date.\n"
-                "• Mandate Sync: UPI AutoPay takes 3–5 working days to re-align, while NetBanking mandates take 7–30 days.\n"
-                "• Lead-Time Rule: Ensure you submit this date shift at least the provider's current processing window prior to the next debit date."
-            )
-        elif intent == "PAYMENT_FAILURE":
-            ai_text = (
-                "Take a deep breath—your investment journey is completely safe!\n\n"
-                "• Zero Penalty from Groww: Groww never charges any fee or penalty for a missed or failed SIP debit.\n"
-                "• Credit reporting: Do not assume a universal outcome; check your bank/payment arrangement if you are concerned about reporting.\n"
-                "• Bank Caution: Your bank may apply a failed-debit charge under its account terms.\n"
-                "• Instant Recovery: Check the app or payment provider for currently available recovery options."
-            )
-        elif intent == "PAUSE_RECOVERY":
-            ai_text = (
-                "Pausing future contributions does not itself redeem previously allotted units. Their market value can rise or fall.\n\n"
-                "• When you Pause: Future debits stop for 1 to 6 months. Your existing units stay invested in the market, continuing to compound and earn returns.\n"
-                "• When you Cancel: Future contributions stop. Some investors may find restarting difficult, but this project does not claim a population-wide restart rate.\n"
-                "• Recommendation: Choose 'Pause' instead of 'Cancel' if you need a break."
-            )
-        else:
-            ai_text = (
-                "Groww provides flexible SIP management so you never have to break your long-term compounding journey.\n\n"
-                "• Processing: Modification timelines vary by platform, AMC, bank, payment method and cut-off. Verify the current timeline with the provider.\n"
-                "• ₹0 Penalty Policy: Charges and availability depend on the platform, AMC and bank.\n"
-                "• Flexibility First: You can pause for up to 6 months or step down rather than cancelling."
-            )
-
-    action_cards = [
-        {"id": "step_down", "label": "✏️ Step-Down SIP", "desc": "Reduce monthly commitment to absorb financial shock."},
-        {"id": "win_win", "label": "🚀 Win-Win: Step-Down + Auto-Step-Up", "desc": "Reduces SIP today, auto-restores to original amount in 6 months."},
-        {"id": "skip", "label": "⏭️ Skip Next Instalment", "desc": "Pauses 1 upcoming cycle with subject to applicable platform, AMC and bank terms."}
-    ]
+            pass
 
     return {
         "type": "SUCCESS",
-        "title": "Groww AI-assisted SIP Guidance",
-        "message": clean_ai_formatting(ai_text),
-        "lead_time_warning": True,
-        "citations": [
-            {"title": "Groww Knowledge Base: Managing SIPs", "url": "https://groww.in/help/mutual-funds/sip-management"},
-            {"title": "NPCI eNACH Guidelines & Mandate Timing", "url": "https://www.npci.org.in"},
-            {"title": "AMFI Investor Education Series", "url": "https://www.amfiindia.com"}
-        ],
-        "action_cards": action_cards
+        "title": "SIP continuity guidance",
+        "message": fallback.get(intent, fallback["GENERAL"]),
+        "action_cards": []
     }
 
 # ==============================================================================
@@ -945,201 +837,13 @@ with tab1:
         sip = st.session_state.active_sip
 
         # Active SIP Summary Card
-        st.markdown(f"""
-        <div class="groww-card" style="border-left: 5px solid #00D09C;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div>
-                    <span style="color:#FFFFFF; font-weight:700; font-size:1.25rem;">📌 Active Portfolio Summary</span>
-                    <span style="font-size:0.85rem; color:#A3A8B0; margin-left:10px;">Folio #GW-48291 • Simulated eNACH Mandate</span>
-                </div>
-                <span class="badge-pass">{sip['status']} • 4 Debits Completed</span>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:14px;">
-                <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
-                    <div style="font-size:0.8rem; color:#A3A8B0;">SCHEME NAME</div>
-                    <div style="font-size:1rem; font-weight:700; color:#FFFFFF; margin-top:3px;">{sip['fund']}</div>
-                </div>
-                <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
-                    <div style="font-size:0.8rem; color:#A3A8B0;">MONTHLY COMMITMENT</div>
-                    <div style="font-size:1.25rem; font-weight:700; color:#00D09C; margin-top:3px;">₹{sip['amount']:,}</div>
-                </div>
-                <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
-                    <div style="font-size:0.8rem; color:#A3A8B0;">NEXT SCHEDULED DEBIT</div>
-                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:3px;">{sip['debit_date']} of Month 5</div>
-                </div>
-                <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px;">
-                    <div style="font-size:0.8rem; color:#A3A8B0;">PORTFOLIO VALUE (GAIN)</div>
-                    <div style="font-size:1.15rem; font-weight:700; color:#00D09C; margin-top:3px;">₹{sip['current_value']:,} <span style="font-size:0.8rem; color:#A3A8B0;">(+7.4%)</span></div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("<hr style='border-color:#2B313A; margin:22px 0 16px 0;'>", unsafe_allow_html=True)
-        st.markdown("#### ⚡ Encountering a Financial Shock?")
-        st.caption("First-time investors frequently face unexpected cash crunches. Rather than cancelling and losing compounding, resolve it instantly with AI.")
-
-        # 3 Shock Resolution Cards (NO EMPTY CONTAINERS)
-        col_c1, col_c2, col_c3 = st.columns(3)
-
-        with col_c1:
-            st.markdown("""
-            <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
-                🚨 1. Rent / Cash-Flow Shock
-            </div>
-            <div style="font-size:0.88rem; color:#E0E0E0; margin-bottom:12px;">
-                Facing sudden liquidity crunch? Adjust expense escalation to compute your affordable step-down.
-            </div>
-            """, unsafe_allow_html=True)
-            
-            rent_val = st.slider(
-                "Rent / Expense Increased by ₹ [ X ]",
-                min_value=500,
-                max_value=10000,
-                value=int(st.session_state.get("x_rent", 1500)),
-                step=500,
-                key="slider_rent_screen2"
-            )
-            st.session_state.x_rent = rent_val
-            
-            if st.button("Resolve Cash-Flow Shock with AI", key="btn_res_rent_shock", use_container_width=True):
-                st.session_state.shock_type = "CASH_FLOW_SHOCK"
-                st.session_state.current_screen = 3
-                st.rerun()
-
-        with col_c2:
-            st.markdown("""
-            <div style="color:#F2994A; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
-                📅 2. Salary Date Shift
-            </div>
-            <div style="font-size:0.88rem; color:#E0E0E0; margin-bottom:12px;">
-                Company moved salary payout? Re-align debit date to eliminate bank bounce fees.
-            </div>
-            """, unsafe_allow_html=True)
-            
-            sal_options = ["5th", "7th", "10th", "12th"]
-            cur_sal_val = st.session_state.get("x_salary_date", "7th")
-            cur_idx = sal_options.index(cur_sal_val) if cur_sal_val in sal_options else 1
-            sal_date_val = st.selectbox(
-                "New Salary Date: [ X ]th of month",
-                sal_options,
-                index=cur_idx,
-                key="select_sal_date_screen2"
-            )
-            st.session_state.x_salary_date = sal_date_val
-
-            if st.button("Resolve Date Shift with AI", key="btn_res_date_shift", use_container_width=True):
-                st.session_state.shock_type = "SALARY_DELAY"
-                st.session_state.current_screen = 3
-                st.rerun()
-
-        with col_c3:
-            st.markdown("""
-            <div style="color:#FF4C4C; font-weight:700; font-size:1.1rem; margin-bottom:8px;">
-                ⚠️ 3. AutoPay Debit Failed
-            </div>
-            <div style="font-size:0.88rem; color:#E0E0E0; margin-bottom:12px;">
-                AutoPay bounced due to low balance.
-            </div>
-            <div style="background:#15181D; border:1px solid #2B313A; border-radius:6px; padding:10px; margin-bottom:14px; font-size:0.85rem; color:#00D09C;">
-                🛡️ <b>Illustrative guidance:</b> Charges and credit reporting depend on the bank/payment arrangement; verify with your bank.
-            </div>
-            """, unsafe_allow_html=True)
-
-            if st.button("Resolve Failed Debit with AI", key="btn_res_failed_debit", use_container_width=True):
-                st.session_state.shock_type = "AUTOPAY_FAILURE"
-                st.session_state.current_screen = 3
-                st.rerun()
-
-    # ==========================================================================
-    # SCREEN 3: 🤖 Step 3 - AI Continuity & Retention Engine
-    # ==========================================================================
-    elif st.session_state.current_screen == 3:
-        col_nav_back, _ = st.columns([2, 5])
-        with col_nav_back:
-            if st.button("← Back to Active Dashboard", key="btn_back_dashboard"):
-                st.session_state.current_screen = 2
-                st.rerun()
-
-        st.markdown("### 🤖 AI Continuity & Retention Engine")
-        st.caption("AI-assisted educational guidance tailored to this simulated SIP scenario; no real account is connected.")
-
-        sip = st.session_state.active_sip
-        shock = st.session_state.shock_type
-        x_rent = st.session_state.get("x_rent", 1500)
-        x_sal_date = st.session_state.get("x_salary_date", "7th")
-        cur_amt = sip["amount"]
-
-        # Edge-Case Calculations
-        is_low_sip = (cur_amt <= 1000)
-        is_severe_crunch = (x_rent >= cur_amt)
-        step_down_val = max(500, cur_amt - x_rent)
-
-        if shock == "CASH_FLOW_SHOCK":
-            query_text = f"My rent increased by ₹{x_rent}. I currently have an active SIP of ₹{cur_amt} and cannot afford the full amount this month. What can I do?"
-            ctx = {
-                "type": "CASH_FLOW_SHOCK",
-                "current_sip": cur_amt,
-                "x_rent": x_rent,
-                "calculated_step_down": step_down_val,
-                "current_debit_date": sip["debit_date"],
-                "is_low_sip": is_low_sip,
-                "is_severe_crunch": is_severe_crunch
-            }
-        elif shock == "SALARY_DELAY":
-            query_text = f"My salary date shifted to the {x_sal_date}. My SIP debit date is on {sip['debit_date']}. How do I avoid debit failure?"
-            ctx = {
-                "type": "SALARY_DELAY",
-                "current_sip": cur_amt,
-                "current_debit_date": sip["debit_date"],
-                "x_salary_date": x_sal_date
-            }
-        else: # AUTOPAY_FAILURE
-            query_text = f"My AutoPay debit of ₹{cur_amt} failed today due to low balance. Will Groww penalize me or harm my CIBIL score? How do I pay now?"
-            ctx = {
-                "type": "AUTOPAY_FAILURE",
-                "current_sip": cur_amt,
-                "current_debit_date": sip["debit_date"]
-            }
-
-        # Run Eval-Gate & Grounded Response
-        ai_started_at = time.perf_counter()
-        with st.spinner("Checking safety and preparing grounded SIP guidance..."):
-            eval_res = run_eval_gate(query_text, GROQ_API_KEY, DEFAULT_MODEL)
-            grounded_res = generate_grounded_answer(query_text, eval_res, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=ctx)
-        ai_latency_ms = round((time.perf_counter() - ai_started_at) * 1000, 1)
-
-        # Live Compliance Status Banner
-        if audit_mode:
-            is_pass = eval_res.get("is_compliant", False)
-            st.markdown(f"""
-            <div style="background:#181B20; border:1px solid #2B313A; border-radius:10px; padding:14px 18px; margin-bottom:18px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.9rem; color:#A3A8B0;"><b>Live Eval Gate Audit:</b> Intent: <code style="color:#00D09C; font-size:14px;">{eval_res.get('detected_intent')}</code> | Latency: <b>{ai_latency_ms} ms</b></span>
-                    <span class="{'badge-pass' if is_pass else 'badge-block'}">Compliance Gate: {'PASS ✅' if is_pass else 'BLOCKED 🛑'}</span>
-                </div>
-                <div style="font-size:0.85rem; color:#A3A8B0; margin-top:6px;">
-                    Confidence Score: <b>{round(eval_res.get('confidence_score', 0) * 100, 1)}%</b> | Model: <code>{DEFAULT_MODEL}</code> | Grounding: <i>Official Groww SLA Knowledge Base</i> | SEBI Shield: Active
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # Clean AI-assisted SIP Guidance Card (High Contrast #1E2228, 16px white text, NO RAW MARKDOWN ARTIFACTS)
-        st.markdown(f"""
-        <div class="groww-card" style="border-left: 5px solid #00D09C;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-                <span style="font-size:1.3rem;">💡</span>
-                <span style="color:#00D09C; font-weight:700; font-size:1.2rem;">Groww AI-assisted SIP Guidance</span>
-            </div>
-            <div style="color:#FFFFFF; line-height:1.7; font-size:16px;">
-                {grounded_res['message']}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(f"**{grounded_res.get('title', 'SIP continuity guidance')}**")
+            st.markdown(grounded_res["message"])
 
         # PM Behavioral Retention Nudge (Loss-Aversion Card)
         st.markdown("""
-        <div style="background:#181B20; border:1px solid #2B313A; border-radius:12px; padding:18px 20px; margin:16px 0 20px 0;">
+        <div style="background:#181B20; border:1px solid #2B313A; border-radius:12px; padding:14px 16px; margin:12px 0;">
             <div style="font-weight:700; color:#E0E0E0; font-size:15px; margin-bottom:12px;">📊 The True Cost of Inaction vs. Smart Flexibility:</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                 <div style="background:#26181B; border:1px solid #FF4C4C; border-radius:10px; padding:14px;">
@@ -1196,7 +900,7 @@ with tab1:
                     st.toast("🎉 Reminder scheduled! Demo reminder saved in this session only; no WhatsApp or SMS will be sent.")
 
         # Action Cards Section with Edge-Case Defenses
-        st.markdown("##### 🚀 3 Win-Win Action Cards:")
+        st.markdown("##### Explore a next step")
 
         # EDGE CASE 1: Low-SIP Threshold Rule (SIP <= 1000)
         # EDGE CASE 2: Severe Cash Crunch (Expense Shock >= Active SIP)
@@ -1305,7 +1009,7 @@ with tab1:
                 if custom_q.strip():
                     with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
                         ff_eval = run_eval_gate(custom_q.strip(), GROQ_API_KEY, DEFAULT_MODEL)
-                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GROQ_API_KEY, DEFAULT_MODEL)
+                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context={"portfolio": st.session_state.active_sip})
                         
                         # Store Groq live response into session state
                         if isinstance(ff_res, dict):
@@ -1352,14 +1056,9 @@ with tab1:
                 stored_response = st.session_state.get("ff_res")
                 display_output = stored_response.get("message", ff_ans["message"]) if isinstance(stored_response, dict) else (stored_response or ff_ans["message"])
 
-                st.markdown(f"""
-                <div class="groww-card" style="border-left: 5px solid #00D09C;">
-                    <div style="color:#00D09C; font-weight:700; font-size:1.15rem; margin-bottom:8px;">💡 Prototype guidance for: "{ff_log['query']}"</div>
-                    <div style="color:#FFFFFF; line-height:1.7; font-size:15px;">
-                        {display_output}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.markdown(f"**{ff_ans.get('title', 'SIP continuity guidance')}**")
+                    st.markdown(display_output)
                 
                 # ------------------------------------------------------------------------------
 # TAB 2: 📊 Dynamic Flexibility & Continuity Simulator
