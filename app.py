@@ -845,6 +845,57 @@ with tab1:
             summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
             st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
+        # Select the disruption scenario the assistant should help resolve.
+        st.markdown("#### What has changed?")
+        st.caption("Choose the situation closest to yours. The assistant will tailor the next steps.")
+        scenario_labels = {
+            "CASH_FLOW_SHOCK": "🏠 My expenses increased / I can no longer afford my SIP",
+            "SALARY_DELAY": "📅 My salary arrives after the SIP debit date",
+            "AUTOPAY_FAILURE": "⚠️ My AutoPay / bank debit failed"
+        }
+        selected_scenario = st.radio(
+            "Choose a situation",
+            list(scenario_labels.keys()),
+            format_func=lambda key: scenario_labels[key],
+            key="selected_disruption",
+            label_visibility="collapsed"
+        )
+        shock = selected_scenario
+        scenario_context = {"portfolio": sip, "type": selected_scenario}
+        if selected_scenario == "CASH_FLOW_SHOCK":
+            rent_increase = st.number_input("How much have your monthly expenses increased? (₹)", min_value=0, max_value=100000, value=1500, step=500, key="scenario_expense_increase")
+            affordable_amount = st.number_input("What monthly SIP amount can you comfortably afford now? (₹)", min_value=0, max_value=25000, value=min(1500, int(sip["amount"])), step=500, key="scenario_affordable_amount")
+            scenario_context.update({"x_rent": rent_increase, "calculated_step_down": affordable_amount})
+            scenario_query = f"My monthly expenses increased by ₹{rent_increase}. My current SIP is ₹{sip['amount']} and I can comfortably afford ₹{affordable_amount}. What are my options?"
+            step_down_val = affordable_amount
+        elif selected_scenario == "SALARY_DELAY":
+            salary_day = st.selectbox("When does your salary usually arrive?", ["5th", "7th", "10th", "15th", "Variable"], index=1, key="scenario_salary_day")
+            scenario_context.update({"x_salary_date": salary_day})
+            scenario_query = f"My salary usually arrives on the {salary_day}, but my SIP debit is scheduled for {sip['debit_date']}. What should I consider?"
+            step_down_val = int(sip["amount"])
+        else:
+            failure_reason = st.selectbox("What happened when the debit was attempted?", ["Insufficient balance", "Mandate inactive or expired", "Bank declined the debit", "I don't know"], key="scenario_failure_reason")
+            scenario_context.update({"failure_reason": failure_reason})
+            scenario_query = f"My SIP AutoPay debit failed. The reason is: {failure_reason}. What should I check and do next?"
+            step_down_val = int(sip["amount"])
+
+        if st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_scenario_guidance"):
+            with st.spinner("Preparing guidance for your selected situation..."):
+                scenario_eval = run_eval_gate(scenario_query, GROQ_API_KEY, DEFAULT_MODEL)
+                scenario_answer = generate_grounded_answer(scenario_query, scenario_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=scenario_context)
+            st.session_state.scenario_answer = scenario_answer
+            st.session_state.scenario_query = scenario_query
+            st.session_state.scenario_eval = scenario_eval
+
+        if st.session_state.get("scenario_answer"):
+            with st.container(border=True):
+                st.markdown(f"**{st.session_state.scenario_answer.get('title', 'SIP continuity guidance')}**")
+                st.markdown(st.session_state.scenario_answer.get("message", ""))
+                st.caption("Prototype guidance only · No real SIP, mandate or bank action is performed.")
+
+        is_low_sip = int(sip["amount"]) <= 1000
+        is_severe_crunch = selected_scenario == "CASH_FLOW_SHOCK" and int(scenario_context.get("calculated_step_down", sip["amount"])) < int(sip["amount"]) * 0.5
+
         # PM Behavioral Retention Nudge (Loss-Aversion Card)
         st.markdown("""
         <div style="background:#181B20; border:1px solid #2B313A; border-radius:12px; padding:14px 16px; margin:12px 0;">
