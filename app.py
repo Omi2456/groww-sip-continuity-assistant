@@ -701,14 +701,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Interactive Notification Banner
-if st.session_state.action_feedback:
-    st.success(st.session_state.action_feedback)
-    if st.button("Dismiss Notification", key="btn_dismiss_notification"):
-        st.session_state.action_feedback = None
-        st.session_state.pipeline_active = False
-        st.rerun()
-
 # ==============================================================================
 # 5. MULTI-TAB STRUCTURE
 # ==============================================================================
