@@ -1255,7 +1255,7 @@ with tab3:
                     {'✅ COMPLIANCE PASS: OPERATIONAL GUIDANCE' if is_pass else '🚨 COMPLIANCE SHIELD TRIGGERED: ADVISORY VIOLATION BLOCKED'}
                 </span>
                 <span class="{'badge-pass' if is_pass else 'badge-block'}">
-                    {'PASS' if is_pass else 'BLOCKED'} (Confidence: {round(m_res.get('confidence_score', 0)*100, 1)}%)
+                    {'PASS' if is_pass else 'BLOCKED'} (Rule-based check)
                 </span>
             </div>
             <div style="margin-top:10px; font-size:15px; color:#FFFFFF;">
@@ -1320,8 +1320,8 @@ with tab3:
             <div style="color:#FF4C4C; font-size:1.4rem; font-weight:700;">{blocked_benchmark} (25%)</div>
         </div>
         <div style="flex:1; background:#181B20; border:1px solid #2B313A; border-radius:10px; padding:14px; text-align:center;">
-            <div style="color:#00D09C; font-size:0.8rem; font-weight:600;">GUARDRAIL ACCURACY</div>
-            <div style="color:#00D09C; font-size:1.4rem; font-weight:700;">100%</div>
+            <div style="color:#A3A8B0; font-size:0.8rem; font-weight:600;">ACCURACY STATUS</div>
+            <div style="color:#FFFFFF; font-size:1.05rem; font-weight:700;">Not yet measured</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
