@@ -629,7 +629,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             ]
         if ctx:
             context_lines.extend([
-                f"Selected situations: {', '.join(ctx.get('selected_scenarios', [])) or ctx.get('type', 'Not specified')}",
+                f"Scenario: {ctx.get('type', 'Not specified')}",
                 f"Expense increase: ₹{ctx.get('x_rent', 0)}",
                 f"Salary date: {ctx.get('x_salary_date', 'Not specified')}",
                 f"Illustrative affordable contribution: ₹{ctx.get('calculated_step_down', 'Not calculated')}"
@@ -644,7 +644,7 @@ Knowledge base: {kb}
 Answer in at most 140 words, using this structure:
 1. One sentence acknowledging the user's situation.
 2. Up to three relevant options or steps, only when useful.
-3. If a platform, AMC or bank rule is unknown, state briefly that availability varies; do not send the user away or invent a rule.
+3. One short "What to verify" note if platform/bank/AMC policy is involved.
 
 Rules:
 - Never invent Groww screen names, menu paths, pause durations, fees, minimums, cut-offs, processing times, bank charges or credit-score outcomes.
@@ -701,13 +701,21 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Interactive Notification Banner
+if st.session_state.action_feedback:
+    st.success(st.session_state.action_feedback)
+    if st.button("Dismiss Notification", key="btn_dismiss_notification"):
+        st.session_state.action_feedback = None
+        st.session_state.pipeline_active = False
+        st.rerun()
+
 # ==============================================================================
 # 5. MULTI-TAB STRUCTURE
 # ==============================================================================
 tab1, tab2, tab3 = st.tabs([
-    "🌱 SIP Assistant",
-    "📊 Simulator",
-    "🛡️ AI Audit"
+    "🌱 SIP Continuity Assistant",
+    "📊 Dynamic Flexibility & Simulator",
+    "🛡️ AI Quality Gate & Evidence Audit Log"
 ])
 
 # Helper: Visual Stepper Header
@@ -746,7 +754,7 @@ with tab1:
     # ==========================================================================
     if st.session_state.current_screen == 1:
         st.markdown("### 🚀 Setup Your First Groww SIP")
-        st.caption("Create a simulated SIP profile to explore the continuity journey.")
+        st.caption("Select your scheme, set your monthly commitment, and authorize recurring AutoPay.")
 
         # Exactly 1 clean setup card (no ghost container)
         col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
@@ -774,7 +782,7 @@ with tab1:
                 max_value=25000,
                 value=3500,
                 step=500,
-                help="Illustrative prototype minimum; actual scheme minimums may differ."
+                help="Minimum threshold: ₹500 (AMC standard)"
             )
 
         with col_s3:
@@ -796,9 +804,10 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("Create SIP profile", type="primary", use_container_width=True):
+        if st.button("Start SIP & Pay First Instalment", use_container_width=True):
+            with st.spinner("Creating a simulated SIP journey..."):
+                time.sleep(2)
             st.session_state.active_sip = {
-                "original_amount": chosen_amt,
                 "fund": chosen_scheme,
                 "amount": chosen_amt,
                 "debit_date": chosen_debit_date,
@@ -809,247 +818,308 @@ with tab1:
                 "status": "Active"
             }
             st.session_state.current_screen = 2
-            st.toast("Your SIP profile is ready.", icon="✅")
+            st.toast("🎉 SIP Started Successfully!", icon="🎉")
             st.rerun()
 
     # ==========================================================================
-    # SCREEN 2: 📊 Active Dashboard — review and choose what changed
+    # SCREEN 2: 📱 Step 2 - Active SIP Dashboard (Simulated Month 4)
     # ==========================================================================
     elif st.session_state.current_screen == 2:
-        sip = st.session_state.active_sip
-        st.markdown("### 📊 Your SIP dashboard")
-        st.caption("A quick portfolio snapshot, followed by the situations you want help with.")
+        col_top_nav, _ = st.columns([2, 5])
+        with col_top_nav:
+            if st.button("← Reconfigure SIP", key="btn_reconfigure_sip"):
+                st.session_state.current_screen = 1
+                st.rerun()
 
+        st.markdown("### 📱 Active SIP Dashboard (Simulated Month 4)")
+        st.caption("Monitor your compounding progress and resolve unexpected financial friction before debit failure.")
+
+        sip = st.session_state.active_sip
+
+        # Active SIP Summary Card — values are simulated demo data.
         with st.container(border=True):
             st.markdown("#### Your SIP at a glance")
-            k1, k2, k3 = st.columns(3)
-            k1.metric("Monthly SIP", f"₹{sip['amount']:,}")
-            k2.metric("Total invested", f"₹{sip['total_invested']:,}")
-            k3.metric("Illustrative value", f"₹{sip['current_value']:,}")
-            st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments · Next debit: {sip['debit_date']} · Illustrative account")
+            summary_cols = st.columns(3)
+            summary_cols[0].metric("Monthly SIP", f"₹{sip['amount']:,}")
+            summary_cols[1].metric("Total invested", f"₹{sip['total_invested']:,}")
+            summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
+            st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
-            gain = int(sip["current_value"]) - int(sip["total_invested"])
-            donut = go.Figure(data=[go.Pie(
-                labels=["Amount invested", "Illustrative change"],
-                values=[max(0, int(sip["total_invested"])), max(0, gain)],
-                hole=0.68,
-                marker=dict(colors=["#00C896", "#64748B"]),
-                textinfo="label+percent",
-                sort=False
-            )])
-            donut.update_layout(
-                height=250, margin=dict(l=8,r=8,t=8,b=8),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#E8EDF2", size=12),
-                showlegend=False,
-                annotations=[dict(text=f"₹{int(sip['current_value']):,}", x=0.5, y=0.5, showarrow=False, font=dict(size=18, color="#FFFFFF"))]
-            )
-            st.plotly_chart(donut, use_container_width=True, config={"displayModeBar":False})
-            st.caption("Illustrative values only; not live market or Groww account data.")
-
+        # Select the disruption scenario the assistant should help resolve.
         st.markdown("#### What has changed?")
-        st.caption("Select every situation that applies. You can choose one, two or all three.")
+        st.caption("Choose the situation closest to yours. The assistant will tailor the next steps.")
+        scenario_labels = {
+            "CASH_FLOW_SHOCK": "🏠 My expenses increased / I can no longer afford my SIP",
+            "SALARY_DELAY": "📅 My salary arrives after the SIP debit date",
+            "AUTOPAY_FAILURE": "⚠️ My AutoPay / bank debit failed"
+        }
+        selected_scenario = st.radio(
+            "Choose a situation",
+            list(scenario_labels.keys()),
+            format_func=lambda key: scenario_labels[key],
+            key="selected_disruption",
+            label_visibility="collapsed"
+        )
+        shock = selected_scenario
+        scenario_context = {"portfolio": sip, "type": selected_scenario}
+        if selected_scenario == "CASH_FLOW_SHOCK":
+            rent_increase = st.number_input("How much have your monthly expenses increased? (₹)", min_value=0, max_value=100000, value=1500, step=500, key="scenario_expense_increase")
+            affordable_amount = st.number_input("What monthly SIP amount can you comfortably afford now? (₹)", min_value=0, max_value=25000, value=min(1500, int(sip["amount"])), step=500, key="scenario_affordable_amount")
+            scenario_context.update({"x_rent": rent_increase, "calculated_step_down": affordable_amount})
+            scenario_query = f"My monthly expenses increased by ₹{rent_increase}. My current SIP is ₹{sip['amount']} and I can comfortably afford ₹{affordable_amount}. What are my options?"
+            step_down_val = affordable_amount
+        elif selected_scenario == "SALARY_DELAY":
+            salary_day = st.selectbox("When does your salary usually arrive?", ["5th", "7th", "10th", "15th", "Variable"], index=1, key="scenario_salary_day")
+            scenario_context.update({"x_salary_date": salary_day})
+            scenario_query = f"My salary usually arrives on the {salary_day}, but my SIP debit is scheduled for {sip['debit_date']}. What should I consider?"
+            step_down_val = int(sip["amount"])
+        else:
+            failure_reason = st.selectbox("What happened when the debit was attempted?", ["Insufficient balance", "Mandate inactive or expired", "Bank declined the debit", "I don't know"], key="scenario_failure_reason")
+            scenario_context.update({"failure_reason": failure_reason})
+            scenario_query = f"My SIP AutoPay debit failed. The reason is: {failure_reason}. What should I check and do next?"
+            step_down_val = int(sip["amount"])
+
+        if st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_scenario_guidance"):
+            with st.spinner("Preparing guidance for your selected situation..."):
+                scenario_eval = run_eval_gate(scenario_query, GROQ_API_KEY, DEFAULT_MODEL)
+                scenario_answer = generate_grounded_answer(scenario_query, scenario_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=scenario_context)
+            st.session_state.scenario_answer = scenario_answer
+            st.session_state.scenario_query = scenario_query
+            st.session_state.scenario_eval = scenario_eval
+
+        if st.session_state.get("scenario_answer"):
+            with st.container(border=True):
+                st.markdown(f"**{st.session_state.scenario_answer.get('title', 'SIP continuity guidance')}**")
+                st.markdown(st.session_state.scenario_answer.get("message", ""))
+                st.caption("Prototype guidance only · No real SIP, mandate or bank action is performed.")
+
+        is_low_sip = int(sip["amount"]) <= 1000
+        is_severe_crunch = selected_scenario == "CASH_FLOW_SHOCK" and int(scenario_context.get("calculated_step_down", sip["amount"])) < int(sip["amount"]) * 0.5
+
+        # PM Behavioral Retention Nudge (Loss-Aversion Card)
         st.markdown("""
-        <style>
-        @keyframes softGlow {
-          0%,100% { box-shadow: 0 0 0 rgba(0,200,150,0); }
-          50% { box-shadow: 0 0 14px rgba(0,200,150,.18); }
-        }
-        div[data-testid="stTabs"] button[role="tab"] { border-radius:10px; transition:all .2s ease; }
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-          border-bottom:2px solid #00C896; color:#00C896; animation:softGlow 3s ease-in-out infinite;
-        }
-        .stTabs [data-baseweb="tab"][aria-selected="true"] { animation:softGlow 3s ease-in-out infinite; }
-        </style>
+        <div style="background:#181B20; border:1px solid #2B313A; border-radius:12px; padding:14px 16px; margin:12px 0;">
+            <div style="font-weight:700; color:#E0E0E0; font-size:15px; margin-bottom:12px;">📊 The True Cost of Inaction vs. Smart Flexibility:</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                <div style="background:#26181B; border:1px solid #FF4C4C; border-radius:10px; padding:14px;">
+                    <div style="color:#FF4C4C; font-weight:700; font-size:14px; margin-bottom:4px;">❌ Cancel SIP Today</div>
+                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Potential long-term contribution gap</div>
+                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">Some investors find it difficult to restart after stopping; this is a behavioural risk, not a measured prediction.</div>
+                </div>
+                <div style="background:#0F2620; border:1px solid #00D09C; border-radius:10px; padding:14px;">
+                    <div style="color:#00D09C; font-weight:700; font-size:14px; margin-bottom:4px;">✅ Step-Down Today</div>
+                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Keeps a contribution habit possible</div>
+                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">A smaller contribution may be more manageable, depending on your circumstances.</div>
+                </div>
+            </div>
+        </div>
         """, unsafe_allow_html=True)
 
-        scenario_options = {
-            "CASH_FLOW_SHOCK": ("🏠 Affordability", "My expenses increased or my current SIP feels too high."),
-            "SALARY_DELAY": ("📅 Salary timing", "My salary arrives after the scheduled debit date."),
-            "AUTOPAY_FAILURE": ("⚠️ Debit failed", "My AutoPay or bank instalment was unsuccessful.")
-        }
-        selected_scenarios = []
-        sc1, sc2, sc3 = st.columns(3)
-        for col, key in zip([sc1,sc2,sc3], scenario_options):
-            title, desc = scenario_options[key]
-            with col:
-                with st.container(border=True):
-                    checked = st.checkbox(title, key=f"scenario_{key}")
-                    st.caption(desc)
-                    if checked:
-                        selected_scenarios.append(key)
+        # Lead-Time Notice
+        st.markdown("""
+        <div class="lead-time-banner">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.2rem;">⏱️</span>
+                <b style="color:#F2994A; font-size:15px;">NPCI & AMC Lead-Time Protection Notice:</b>
+            </div>
+            <div style="margin-top:6px; font-size:14px; color:#FFFFFF;">
+                Processing times for modifications depend on the platform, AMC, bank, payment method and request cut-off. Confirm the current timeline before relying on a change.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        scenario_context = {"portfolio": sip, "selected_scenarios": selected_scenarios}
-        if "CASH_FLOW_SHOCK" in selected_scenarios:
-            st.markdown("**Affordability details**")
-            a1,a2 = st.columns(2)
-            with a1:
-                expense_increase = st.number_input("Monthly expense increase (₹)", min_value=0, max_value=100000, value=1500, step=500, key="scenario_expense_increase")
-            with a2:
-                affordable_amount = st.number_input("Affordable SIP amount (₹)", min_value=500, max_value=25000, value=max(500,min(1500,int(sip["amount"]))), step=500, key="scenario_affordable_amount")
-            scenario_context.update({"x_rent":expense_increase,"calculated_step_down":affordable_amount})
-            if affordable_amount > int(sip["amount"]):
-                st.info("Your selected affordable amount is above your current SIP. You can keep your current contribution or adjust the amount.")
-        if "SALARY_DELAY" in selected_scenarios:
-            salary_day = st.selectbox("When does your salary usually arrive?", ["5th","7th","10th","15th","Variable"], index=1, key="scenario_salary_day")
-            scenario_context["x_salary_date"] = salary_day
-        if "AUTOPAY_FAILURE" in selected_scenarios:
-            failure_reason = st.selectbox("What happened when the debit was attempted?", ["Insufficient balance","Mandate inactive or expired","Bank declined the debit","I don't know"], key="scenario_failure_reason")
-            scenario_context["failure_reason"] = failure_reason
+        # Dynamic Action Execution Handler
+        def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None):
+            prog = st.progress(0)
+            for p in [30, 75, 100]:
+                time.sleep(0.12)
+                prog.progress(p)
+            st.toast(toast_msg, icon="✅")
+            if update_sip_fn:
+                update_sip_fn()
+            st.session_state.action_feedback = feedback_msg
+            st.session_state.pipeline_active = True
+            st.rerun()
 
-        if selected_scenarios:
-            st.success(f"{len(selected_scenarios)} situation{'s' if len(selected_scenarios)>1 else ''} selected")
+        # Single unified success card after any Execute action
+        if st.session_state.pipeline_active:
+            with st.container():
+                st.markdown("""
+                <div style="background:#0F2620; border:1.5px solid #00D09C; border-radius:12px; padding:18px 22px; margin:16px 0;">
+                    <div style="color:#00D09C; font-weight:700; font-size:1.1rem; margin-bottom:6px;">
+                        Demo simulation completed — no real mandate was changed.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("📅 Set Reminder for Month 5 Re-evaluation", key="btn_set_reminder"):
+                    st.toast("🎉 Reminder scheduled! Demo reminder saved in this session only; no WhatsApp or SMS will be sent.")
+
+        # Action Cards Section with Edge-Case Defenses
+        st.markdown("##### Explore a next step")
+
+        # EDGE CASE 1: Low-SIP Threshold Rule (SIP <= 1000)
+        # EDGE CASE 2: Severe Cash Crunch (Expense Shock >= Active SIP)
+        if (shock == "CASH_FLOW_SHOCK" and is_low_sip) or (shock == "CASH_FLOW_SHOCK" and is_severe_crunch):
+            col_e1, col_e2 = st.columns(2)
+            with col_e1:
+                st.markdown("""
+                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Illustrates a one-cycle pause; actual availability and charges depend on provider terms.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
+                    handle_action_execution(
+                        "Demo simulation completed — no real mandate was changed.",
+                        "✅ Request Processed! Upcoming cycle skipped subject to applicable platform, AMC and bank terms. Resumes automatically next month."
+                    )
+            with col_e2:
+                st.markdown("""
+                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏸️ 3-Month Emergency Pause</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Suspends debits for 3 months while income recovers. Zero penalty, existing units generally remain invested unless redeemed; market value can rise or fall.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
+                    handle_action_execution(
+                        "Demo simulation completed — no real mandate was changed.",
+                        "✅ Request Processed! 3-Month Emergency Pause activated. Folio existing units remain exposed to market movements."
+                    )
+
         else:
-            st.caption("Choose at least one situation to continue.")
+            # Normal Flow: 3 Action Cards with EXACT BUTTON LABELS
+            c_act1, c_act2, c_act3 = st.columns(3)
 
-        if st.button("Continue to AI Retention Engine →", type="primary", use_container_width=True, disabled=not selected_scenarios, key="btn_continue_retention"):
-            st.session_state.retention_context = scenario_context
-            st.session_state.scenario_answer = None
-            st.session_state.scenario_query = None
-            st.session_state.current_screen = 3
-            st.rerun()
+            with c_act1:
+                st.markdown(f"""
+                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">✏️ Step-Down SIP to ₹{step_down_val:,}</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces monthly commitment to absorb financial shock.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True):
+                    def update_step_down():
+                        st.session_state.active_sip["amount"] = step_down_val
+                    handle_action_execution(
+                        "Demo simulation completed — no real mandate was changed.",
+                        f"Demo simulation completed — no real mandate was changed. Monthly commitment adjusted to ₹{step_down_val:,}.",
+                        update_step_down
+                    )
 
-        if st.button("← Reconfigure SIP", key="btn_reconfigure_sip"):
-            st.session_state.current_screen = 1
-            st.rerun()
+            with c_act2:
+                st.markdown(f"""
+                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">🚀 Win-Win: Step-Down + Auto-Step-Up</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Reduces SIP today, auto-restores to original amount in 6 months.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True):
+                    def update_win_win():
+                        st.session_state.active_sip["amount"] = step_down_val
+                    handle_action_execution(
+                        "Demo simulation completed — no real mandate was changed.",
+                        f"Demo simulation completed — no real mandate was changed. SIP reduced to ₹{step_down_val:,} for 6 months with auto-step-up scheduled.",
+                        update_win_win
+                    )
 
-    # ==========================================================================
-    # SCREEN 3: 🧠 AI Retention Engine — understand, compare and simulate
-    # ==========================================================================
-    elif st.session_state.current_screen == 3:
-        sip = st.session_state.active_sip
-        context = st.session_state.get("retention_context", {"portfolio":sip,"selected_scenarios":[]})
-        selected_scenarios = context.get("selected_scenarios", [])
-        scenario_names = {
-            "CASH_FLOW_SHOCK":"Affordability",
-            "SALARY_DELAY":"Salary timing",
-            "AUTOPAY_FAILURE":"AutoPay failure"
-        }
-        st.markdown("### 🧠 AI Retention Engine")
-        st.caption("Your selected situations are combined with your simulated SIP profile to create a continuity plan.")
+            with c_act3:
+                st.markdown("""
+                <div class="groww-card" style="min-height:130px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:#FFFFFF; font-weight:700; font-size:1.05rem; margin-bottom:6px;">⏭️ Skip Next Instalment</div>
+                        <div style="color:#E0E0E0; font-size:0.9rem; line-height:1.4;">Pauses 1 upcoming cycle with subject to applicable platform, AMC and bank terms.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
+                    handle_action_execution(
+                        "Demo simulation completed — no real mandate was changed.",
+                        "Demo simulation completed — no real mandate was changed. Upcoming cycle skipped; resumes automatically next month."
+                    )
 
-        if st.button("← Back to Active Dashboard", key="btn_back_dashboard"):
-            st.session_state.current_screen = 2
-            st.rerun()
+        # Free-Form Consultation Desk at bottom of Screen 3
+        st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
+        st.markdown("#### 💬 Ask custom questions about your SIP:")
+        st.caption("Ask any follow-up question regarding your SIP continuity, pause rules, or bank debit policies.")
 
-        with st.container(border=True):
-            st.markdown("**Your selected situation(s)**")
-            st.write(" · ".join(scenario_names.get(x,x) for x in selected_scenarios))
-            st.caption(f"Current monthly SIP: ₹{int(sip['amount']):,} · Existing holdings remain invested unless redeemed.")
-
-        query_parts = []
-        if "CASH_FLOW_SHOCK" in selected_scenarios:
-            query_parts.append(f"monthly expenses increased by ₹{context.get('x_rent',0)}; affordable monthly SIP amount is ₹{context.get('calculated_step_down',500)}")
-        if "SALARY_DELAY" in selected_scenarios:
-            query_parts.append(f"salary usually arrives on the {context.get('x_salary_date','unknown')} while the SIP debit is scheduled for {sip.get('debit_date','unknown')}")
-        if "AUTOPAY_FAILURE" in selected_scenarios:
-            query_parts.append(f"AutoPay debit failed; reported reason: {context.get('failure_reason','unknown')}")
-        combined_query = "Help me build a neutral SIP continuity plan for these situations: " + "; ".join(query_parts)
-
-        if not st.session_state.get("scenario_answer"):
-            with st.spinner("Understanding your situation and preparing a plan..."):
-                combined_eval = run_eval_gate(combined_query, GROQ_API_KEY, DEFAULT_MODEL)
-                combined_answer = generate_grounded_answer(
-                    combined_query, combined_eval, GROQ_API_KEY, DEFAULT_MODEL,
-                    lifecycle_context=context
-                )
-            st.session_state.scenario_answer = combined_answer
-            st.session_state.scenario_query = combined_query
-            st.session_state.scenario_eval = combined_eval
-
-        answer = st.session_state.scenario_answer
-        with st.container(border=True):
-            st.markdown(f"#### {answer.get('title','Your continuity plan')}")
-            st.markdown(answer.get("message",""))
-            st.caption("Your selected options and account figures are illustrative prototype data.")
-
-        st.markdown("#### Choose how you want to proceed")
-        st.caption("These controls update your prototype plan and show the outcome immediately.")
-        action_cols = st.columns(3)
-        if "CASH_FLOW_SHOCK" in selected_scenarios:
-            affordable = max(500,int(context.get("calculated_step_down",500)))
-            with action_cols[0]:
-                if st.button(f"Set SIP to ₹{affordable:,}", type="primary", use_container_width=True, key="btn_apply_stepdown"):
-                    old_amount = int(sip["amount"])
-                    st.session_state.active_sip["amount"] = affordable
-                    st.session_state.active_sip["status"] = "Adjusted"
-                    st.session_state.action_feedback = f"Monthly SIP contribution updated: ₹{old_amount:,} → ₹{affordable:,}."
-                    st.session_state.last_action = "step_down"
-                    st.toast(st.session_state.action_feedback, icon="✅")
-                    st.rerun()
-        if "SALARY_DELAY" in selected_scenarios:
-            with action_cols[1]:
-                proposed_date = context.get("x_salary_date","10th")
-                if st.button("Save preferred debit date", use_container_width=True, key="btn_apply_date", disabled=proposed_date == "Variable"):
-                    planned_date = f"{proposed_date} of month"
-                    st.session_state.active_sip["debit_date"] = planned_date
-                    st.session_state.action_feedback = f"Preferred debit date updated in your plan: {planned_date}."
-                    st.session_state.last_action = "date_change"
-                    st.toast(st.session_state.action_feedback, icon="✅")
-                    st.rerun()
-        if "AUTOPAY_FAILURE" in selected_scenarios:
-            with action_cols[2]:
-                if st.button("Mark issue reviewed", use_container_width=True, key="btn_review_failure"):
-                    st.session_state.active_sip["payment_status"] = "Reviewed"
-                    st.session_state.action_feedback = "Payment issue marked as reviewed. No bank retry or mandate change was sent."
-                    st.session_state.last_action = "payment_review"
-                    st.toast(st.session_state.action_feedback, icon="✅")
-                    st.rerun()
-
-        if "CASH_FLOW_SHOCK" in selected_scenarios and int(context.get("calculated_step_down",500)) >= 500:
-            original = int(sip.get("original_amount", sip.get("amount",500)))
-            reduced = int(context.get("calculated_step_down",500))
-            months = 6
-            gap = max(0,original-reduced) * months
-            loss_cols = st.columns(2)
-            with loss_cols[0]:
-                st.metric("If you stop for 6 months", "₹0", help="Future contributions during this illustrative period.")
-            with loss_cols[1]:
-                st.metric(f"If you continue at ₹{reduced:,}/month", f"₹{reduced*months:,}", help="Illustrative contributions over six months.")
-            st.warning(f"Stopping instead of maintaining a ₹{reduced:,}/month contribution means **₹{reduced*months:,} less invested over six months**. Compared with your previous ₹{original:,}/month SIP, the six-month contribution gap is ₹{gap:,}. This is a contribution difference—not a guaranteed loss in portfolio value.")
-        if "CASH_FLOW_SHOCK" in selected_scenarios and int(context.get("calculated_step_down",500)) < 500:
-            st.warning("If ₹500 is not affordable, don't force a contribution. Prioritise essential expenses and consider a temporary stop rather than taking on financial strain.")
-
-        # Follow-up questions stay in Step 3, beside the guidance they relate to.
-        st.markdown("#### Ask a follow-up question")
         custom_q = st.text_area(
-            "Your question",
+            "Enter your query:",
             value=st.session_state.free_form_query,
-            placeholder="e.g. What happens to my existing units if I stop future instalments?",
+            placeholder="e.g., If I pause for 3 months, does my money still earn market returns? Will my bank fine me?",
             height=90,
             key="txt_custom_query_s3"
         )
-        q1,q2 = st.columns([1,4])
-        with q1:
-            if st.button("Ask AI", type="primary", key="btn_consult_s3"):
+
+        col_ff1, col_ff2 = st.columns([1.5, 5])
+        with col_ff1:
+            if st.button("✨ Consult Assistant", key="btn_consult_s3", use_container_width=True):
                 if custom_q.strip():
-                    with st.spinner("Preparing a concise answer..."):
-                        q_eval = run_eval_gate(custom_q.strip(), GROQ_API_KEY, DEFAULT_MODEL)
-                        q_answer = generate_grounded_answer(
-                            custom_q.strip(), q_eval, GROQ_API_KEY, DEFAULT_MODEL,
-                            lifecycle_context={"portfolio":st.session_state.active_sip, **context}
-                        )
-                    st.session_state.ff_res = q_answer
-                    st.session_state.last_eval_log = {
-                        "query":custom_q.strip(),"eval_result":q_eval,
-                        "latency_ms":None,"timestamp":datetime.now().strftime("%H:%M:%S")
-                    }
-                    st.rerun()
-        with q2:
-            if st.button("Clear", key="btn_clear_s3"):
+                    with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
+                        ff_eval = run_eval_gate(custom_q.strip(), GROQ_API_KEY, DEFAULT_MODEL)
+                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context={"portfolio": st.session_state.active_sip})
+                        
+                        # Store Groq live response into session state
+                        if isinstance(ff_res, dict):
+                            st.session_state.ff_res = ff_res
+                        else:
+                            st.session_state.ff_res = {"type": "SUCCESS", "message": str(ff_res), "title": "Assistant response"}
+
+                        st.session_state.last_eval_log = {
+                            "query": custom_q.strip(),
+                            "eval_result": ff_eval,
+                            "latency_ms": None,
+                            "timestamp": datetime.now().strftime("%H:%M:%S")
+                        }
+                        st.rerun()
+        with col_ff2:
+            if st.button("Clear Input", key="btn_clear_s3"):
                 st.session_state.free_form_query = ""
                 st.session_state.last_eval_log = None
                 st.session_state.ff_res = None
                 st.rerun()
-        if st.session_state.get("ff_res"):
-            with st.container(border=True):
-                st.markdown(f"**{st.session_state.ff_res.get('title','Answer')}**")
-                st.markdown(st.session_state.ff_res.get("message",""))
-# ------------------------------------------------------------------------------
+
+        if st.session_state.last_eval_log:
+            ff_log = st.session_state.last_eval_log
+            ff_eval = ff_log["eval_result"]
+            ff_ans = st.session_state.get("ff_res") or generate_grounded_answer(ff_log["query"], ff_eval, GROQ_API_KEY, DEFAULT_MODEL)
+            
+            if ff_ans.get("type") == "COMPLIANCE_VIOLATION":
+                st.markdown(f"""
+                <div class="compliance-fallback-card">
+                    <div class="compliance-title">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#FF4C4C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        {ff_ans['title']}
+                    </div>
+                    <div style="color:#FFFFFF; font-size:15px; line-height:1.6; margin-bottom:12px;">
+                        {ff_ans['message']}
+                    </div>
+                    <div style="font-size:14px; color:#E0E0E0;">
+                        <b>SEBI Regulatory Guidance:</b> For mutual fund scheme selection, risk profiling, or investment advice, please consult an AMFI-registered distributor or SEBI-registered Investment Adviser.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Priority: Render live Groq AI response if available; otherwise fall back to static grounded text
+                stored_response = st.session_state.get("ff_res")
+                display_output = stored_response.get("message", ff_ans["message"]) if isinstance(stored_response, dict) else (stored_response or ff_ans["message"])
+
+                with st.container(border=True):
+                    st.markdown(f"**{ff_ans.get('title', 'SIP continuity guidance')}**")
+                    st.markdown(display_output)
+                
+                # ------------------------------------------------------------------------------
 # TAB 2: 📊 Dynamic Flexibility & Continuity Simulator
 # ------------------------------------------------------------------------------
 with tab2:
-    st.markdown("### 📊 Dynamic Flexibility & Simulator")
+    st.markdown("### 📊 SIP Flexibility & Illustrative Projection Simulator")
     st.caption("Illustrative scenario comparison only; actual mutual-fund returns are market-linked and not predictable.")
 
     col_sim_ctrl, col_sim_view = st.columns([1, 2])
@@ -1194,7 +1264,7 @@ with tab2:
 # TAB 3: 🛡️ AI Quality Gate & Evidence Audit Log (Mentor Testing Mode)
 # ------------------------------------------------------------------------------
 with tab3:
-    st.markdown("### 🛡️ AI Quality Gate & Evidence Audit Log")
+    st.markdown("### 🛡️ AI Quality Gate & Benchmark Audit Suite")
     st.caption("Live compliance testbed, 20-Item Golden Set validation, and SEBI Non-Advisory Shield verification.")
 
     st.markdown("##### 🧪 Mentor Live Test Suite")
