@@ -13,15 +13,9 @@ import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
 
-# Try importing google-genai
-try:
-    from google import genai
-    from google.genai import types
-    GENAI_AVAILABLE = True
-except ImportError:
-    GENAI_AVAILABLE = False
+from openai import OpenAI
 
-from knowledge_base import (
+from knowledge_basefrom knowledge_base import (
     GROWW_SIP_KNOWLEDGE_BASE,
     GOLDEN_SET_BENCHMARK,
     INTENT_DEFINITIONS
@@ -38,22 +32,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Automatic API key resolution (environment variable or secrets)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if not GEMINI_API_KEY:
-    try:
-        if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
-            GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        pass
+# Groq configuration (environment variables or Streamlit secrets).
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+try:
+    if not GROQ_API_KEY and "GROQ_API_KEY" in st.secrets:
+        GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+    if "GROQ_MODEL" in st.secrets:
+        GROQ_MODEL = st.secrets["GROQ_MODEL"]
+    if "GROQ_BASE_URL" in st.secrets:
+        GROQ_BASE_URL = st.secrets["GROQ_BASE_URL"]
+except Exception:
+    pass
 
-# DEFAULT_MODEL = "gemini-2.5-flash"
-# UPDATED CODE:
-# DEFAULT_MODEL = "gemini-1.5-flash"
-# To this:
-# DEFAULT_MODEL = "gemini-2.0-flash"
-# UPDATED CODE:
-DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_MODEL = GROQ_MODEL
 
 # ==============================================================================
 # 1. ACCESSIBILITY, CONTRAST & TYPOGRAPHY DESIGN SYSTEM (CUSTOM CSS)
@@ -472,10 +465,10 @@ with st.sidebar:
     
     st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
     
-    if GEMINI_API_KEY:
+    if GROQ_API_KEY:
         st.markdown('<span class="badge-pass">🟢 </span>', unsafe_allow_html=True)
     else:
-        st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local Grounded Engine Active</span>', unsafe_allow_html=True)
+        st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local grounded fallback active</span>', unsafe_allow_html=True)
 
 # ==============================================================================
 # 3. AI COMPLIANCE EVAL-GATE & SMART Q&A FALLBACK ENGINE
@@ -515,14 +508,15 @@ def clean_ai_formatting(text: str) -> str:
     joined = joined.replace("\n\n", "<br><br>").replace("\n", "<br>")
     return joined
 
-def get_gemini_client(api_key: str):
-    """Instantiate Gemini client using google-genai SDK."""
-    if not api_key or not GENAI_AVAILABLE:
+def get_groq_client(api_key: str):
+    """Create an OpenAI-compatible client configured for Groq."""
+    if not api_key:
         return None
     try:
-        return genai.Client(api_key=api_key)
+        return OpenAI(api_key=api_key, base_url=GROQ_BASE_URL, timeout=25.0, max_retries=1)
     except Exception:
         return None
+
 
 def offline_compliance_guard(query: str) -> dict:
     """
@@ -566,62 +560,12 @@ def offline_compliance_guard(query: str) -> dict:
         "detected_intent": intent
     }
 
-def run_eval_gate(user_query: str, api_key: str = GEMINI_API_KEY, model_name: str = DEFAULT_MODEL) -> dict:
-    """
-    Run Eval-Gate & Compliance Shield using Gemini with strict JSON output schema.
-    """
-    client = get_gemini_client(api_key)
-    
-    if not client:
-        return offline_compliance_guard(user_query)
-        
-    system_instruction = """
-You are the strict Financial Compliance & Intent Officer for Groww's 'SIP Continuity Assistant'.
-Your role is to protect first-time mutual fund investors and enforce SEBI regulations.
+def run_eval_gate(user_query: str, api_key: str = GROQ_API_KEY, model_name: str = DEFAULT_MODEL) -> dict:
+    """Fast deterministic first-pass compliance gate; no network call is needed."""
+    return offline_compliance_guard(user_query)
 
-GUARDRAILS & BOUNDARIES:
-1. BLOCK ANY stock or mutual fund picking, fund comparison, or buy/sell recommendations.
-2. BLOCK ANY claims or confirmation of guaranteed returns or profit expectations.
-3. BLOCK ANY market timing, panic withdrawal, FOMO, or speculative crypto/F&O queries.
-4. ALLOW ONLY operational and lifecycle management of existing SIPs:
-   - Affordability shocks (stepping down amount, skipping 1 instalment)
-   - Salary date mismatch (shifting debit date, AutoPay buffer)
-   - Payment failure (Groww ₹0 penalty policy, bank bounce warning, CIBIL safety, UPI Pay Now)
-   - Pause vs. Cancel (unit safety, avoiding compounding disruption)
-   - Lead times (3-7 days rule) and mandate alignment.
 
-OUTPUT REQUIREMENT:
-You must reply with ONLY a single raw JSON object conforming strictly to this schema:
-{
-  "is_compliant": bool,
-  "confidence_score": float,
-  "violation_reason": string or null,
-  "detected_intent": "AFFORDABILITY" | "DATE_MISMATCH" | "PAYMENT_FAILURE" | "PAUSE_RECOVERY" | "UNALLOWED_ADVICE" | "GENERAL"
-}
-Do not include any markdown formatting, code fences (no ```json), or explanatory text outside the JSON.
-"""
-
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=f"User Query to evaluate: \"{user_query}\"",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.1,
-                response_mime_type="application/json"
-            )
-        )
-        text = response.text.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:].strip()
-        parsed = json.loads(text)
-        return parsed
-    except Exception:
-        return offline_compliance_guard(user_query)
-
-def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = GEMINI_API_KEY, model_name: str = DEFAULT_MODEL, lifecycle_context: dict = None) -> dict:
+def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = GROQ_API_KEY, model_name: str = DEFAULT_MODEL, lifecycle_context: dict = None) -> dict:
     """
     Generate grounded response adhering to official Groww rules, with upgraded smart fallback.
     """
@@ -644,55 +588,59 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
             "action_cards": []
         }
 
-    client = get_gemini_client(api_key)
+    client = get_groq_client(api_key)
     ai_text = None
     ctx_type = lifecycle_context.get("type") if lifecycle_context else None
-    
+
     if client:
-        grounding_context = json.dumps(GROWW_SIP_KNOWLEDGE_BASE, indent=2)
+        grounding_context = json.dumps(GROWW_SIP_KNOWLEDGE_BASE, ensure_ascii=False, indent=2)
         ctx_details = ""
         if lifecycle_context:
             ctx_details = f"""
-DYNAMIC LIFE-EVENT SIMULATION DATA:
+SIMULATED LIFE-EVENT CONTEXT (illustrative, not a real account):
 - Trigger Event: {lifecycle_context.get('type')}
 - Current Monthly SIP: ₹{lifecycle_context.get('current_sip')}
 - Current Debit Date: {lifecycle_context.get('current_debit_date')}
-- Rent/Expense Increase (X): ₹{lifecycle_context.get('x_rent', 0)}
-- New Salary Date (Xth): {lifecycle_context.get('x_salary_date', '')}
+- Rent/Expense Increase: ₹{lifecycle_context.get('x_rent', 0)}
+- New Salary Date: {lifecycle_context.get('x_salary_date', '')}
 - Calculated Step-Down Value: ₹{lifecycle_context.get('calculated_step_down', 0)}
 - Is Low SIP: {lifecycle_context.get('is_low_sip', False)}
 - Is Severe Crunch: {lifecycle_context.get('is_severe_crunch', False)}
 """
         prompt = f"""
-You are the official 'Groww SIP Continuity Assistant'.
-Your goal is to reassure first-time investors who are anxious about missing SIP payments, salary delays, or budget crunches, and guide them to retain their compounding habit.
+You are a careful SIP continuity education assistant. This is an independent product prototype, not an official Groww service.
 
-OFFICIAL GROWW POLICIES (STRICT GROUNDING):
+KNOWLEDGE BASE (treat source-backed statements as authoritative; if a detail is absent or uncertain, say so):
 {grounding_context}
 {ctx_details}
 
 USER QUERY:
-"{user_query}"
+{user_query}
 
 DETECTED INTENT: {intent}
 
-INSTRUCTIONS:
-1. Provide a calm, reassuring, highly structured response using bullet points.
-2. Quote exact numbers if provided in simulation data.
-3. If low-SIP or severe crunch is present, explicitly recommend skipping or pausing instead of stepping down to 0.
-4. Emphasize Groww's ₹0 penalty policy and zero CIBIL impact.
-5. Highlight the 3-7 working days lead time rule for any SIP edit.
-6. Emphasize that all existing units remain 100% safe and actively compounding in their folio.
+Respond in clear, concise language with practical next steps. Be empathetic but never pressure the user to continue investing.
+Rules:
+- Do not recommend specific funds, securities, or investment products.
+- Do not guarantee returns, penalty outcomes, credit-score outcomes, mandate timings, or SIP modification availability.
+- Distinguish general mutual-fund concepts from platform-, AMC-, and bank-specific rules.
+- If a rule is not supported by the knowledge base, explicitly say the user should verify it with Groww, their AMC, or bank.
+- Existing units generally remain invested unless the investor redeems them; do not imply that pausing future SIP debits changes existing holdings.
+- Describe Step-Down + Auto-Step-Up as a proposed product concept, not a currently available Groww feature.
+- Explain that all actions shown in this prototype are simulations; no real SIP, mandate, reminder, bank payment, or NPCI request is executed.
+- If a simulated scenario is supplied, use its figures but label them illustrative.
 """
         try:
-            resp = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.3
-                )
+                messages=[
+                    {"role": "system", "content": "You provide grounded, non-advisory SIP lifecycle education. Follow the supplied safety rules and do not invent platform policies."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=700
             )
-            ai_text = resp.text.strip()
+            ai_text = (response.choices[0].message.content or "").strip() or None
         except Exception:
             ai_text = None
 
@@ -850,7 +798,7 @@ st.markdown("""
         </div>
         <div>
             <div class="groww-title">Groww SIP Continuity Assistant</div>
-            <div class="groww-subtitle">AI-Native Retention Shield for 12-Month First-Time Investors</div>
+            <div class="groww-subtitle">AI-assisted SIP continuity prototype for first-time investors</div>
         </div>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
@@ -919,7 +867,7 @@ with tab1:
         col_s1, col_s2, col_s3 = st.columns([2.5, 2, 2])
         
         with col_s1:
-            # 10 Real Top Indian Funds
+            # Illustrative fund examples (not recommendations)
             scheme_choices = [
                 "Parag Parikh Flexi Cap Fund",
                 "Nifty 50 Index Fund (UTI / HDFC)",
@@ -932,7 +880,7 @@ with tab1:
                 "ICICI Prudential Equity & Debt Fund",
                 "HDFC Mid-Cap Opportunities Fund"
             ]
-            chosen_scheme = st.selectbox("Select Scheme", scheme_choices, index=1)
+            chosen_scheme = st.selectbox("Illustrative Scheme Example", scheme_choices, index=1)
 
         with col_s2:
             chosen_amt = st.number_input(
@@ -959,12 +907,12 @@ with tab1:
 
         st.markdown("""
         <div style="background:#15181D; border:1px solid #2B313A; border-radius:8px; padding:12px 16px; margin:16px 0; font-size:14px; color:#A3A8B0;">
-            🔒 <b>Groww Investor Charter:</b> ₹0 commission direct plans • ₹0 Groww modification penalty • Modify, pause, or step down anytime with 3-7 day lead time.
+            🔒 <b>Prototype information:</b> Fund examples are illustrative. Availability and processing of SIP changes depend on platform, AMC and bank terms.
         </div>
         """, unsafe_allow_html=True)
 
         if st.button("Start SIP & Pay First Instalment", use_container_width=True):
-            with st.spinner("Encrypting AutoPay Mandate & Connecting with Bank..."):
+            with st.spinner("Creating a simulated SIP journey..."):
                 time.sleep(2)
             st.session_state.active_sip = {
                 "fund": chosen_scheme,
@@ -1001,7 +949,7 @@ with tab1:
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
                     <span style="color:#FFFFFF; font-weight:700; font-size:1.25rem;">📌 Active Portfolio Summary</span>
-                    <span style="font-size:0.85rem; color:#A3A8B0; margin-left:10px;">Folio #GW-48291 • Verified eNACH Mandate</span>
+                    <span style="font-size:0.85rem; color:#A3A8B0; margin-left:10px;">Folio #GW-48291 • Simulated eNACH Mandate</span>
                 </div>
                 <span class="badge-pass">{sip['status']} • 4 Debits Completed</span>
             </div>
@@ -1093,7 +1041,7 @@ with tab1:
                 AutoPay bounced due to low balance.
             </div>
             <div style="background:#15181D; border:1px solid #2B313A; border-radius:6px; padding:10px; margin-bottom:14px; font-size:0.85rem; color:#00D09C;">
-                🛡️ <b>Groww Policy:</b> ₹0 Penalty & Zero CIBIL Impact guaranteed.
+                🛡️ <b>Illustrative guidance:</b> Charges and credit reporting depend on the bank/payment arrangement; verify with your bank.
             </div>
             """, unsafe_allow_html=True)
 
@@ -1154,9 +1102,11 @@ with tab1:
             }
 
         # Run Eval-Gate & Grounded Response
-        with st.spinner("AI Grounding with Official Groww Knowledge Base & SEBI Guardrails..."):
-            eval_res = run_eval_gate(query_text, GEMINI_API_KEY, DEFAULT_MODEL)
-            grounded_res = generate_grounded_answer(query_text, eval_res, GEMINI_API_KEY, DEFAULT_MODEL, lifecycle_context=ctx)
+        ai_started_at = time.perf_counter()
+        with st.spinner("Checking safety and preparing grounded SIP guidance..."):
+            eval_res = run_eval_gate(query_text, GROQ_API_KEY, DEFAULT_MODEL)
+            grounded_res = generate_grounded_answer(query_text, eval_res, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=ctx)
+        ai_latency_ms = round((time.perf_counter() - ai_started_at) * 1000, 1)
 
         # Live Compliance Status Banner
         if audit_mode:
@@ -1164,7 +1114,7 @@ with tab1:
             st.markdown(f"""
             <div style="background:#181B20; border:1px solid #2B313A; border-radius:10px; padding:14px 18px; margin-bottom:18px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.9rem; color:#A3A8B0;"><b>Live Eval Gate Audit:</b> Intent: <code style="color:#00D09C; font-size:14px;">{eval_res.get('detected_intent')}</code> | Latency: <b>160 ms</b></span>
+                    <span style="font-size:0.9rem; color:#A3A8B0;"><b>Live Eval Gate Audit:</b> Intent: <code style="color:#00D09C; font-size:14px;">{eval_res.get('detected_intent')}</code> | Latency: <b>{ai_latency_ms} ms</b></span>
                     <span class="{'badge-pass' if is_pass else 'badge-block'}">Compliance Gate: {'PASS ✅' if is_pass else 'BLOCKED 🛑'}</span>
                 </div>
                 <div style="font-size:0.85rem; color:#A3A8B0; margin-top:6px;">
@@ -1193,13 +1143,13 @@ with tab1:
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                 <div style="background:#26181B; border:1px solid #FF4C4C; border-radius:10px; padding:14px;">
                     <div style="color:#FF4C4C; font-weight:700; font-size:14px; margin-bottom:4px;">❌ Cancel SIP Today</div>
-                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Lost 5-Year Wealth Creation = -₹1.8 Lakhs</div>
-                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">67% of first-timers who cancel never restart compounding.</div>
+                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Potential long-term contribution gap</div>
+                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">Some investors find it difficult to restart after stopping; this is a behavioural risk, not a measured prediction.</div>
                 </div>
                 <div style="background:#0F2620; border:1px solid #00D09C; border-radius:10px; padding:14px;">
                     <div style="color:#00D09C; font-weight:700; font-size:14px; margin-bottom:4px;">✅ Step-Down Today</div>
-                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Retains 82% of Total Compounding Wealth</div>
-                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">Rupee-cost averaging stays alive; zero restart friction.</div>
+                    <div style="color:#FFFFFF; font-size:15px; font-weight:700;">Keeps a contribution habit possible</div>
+                    <div style="color:#A3A8B0; font-size:13px; margin-top:4px;">A smaller contribution may be more manageable, depending on your circumstances.</div>
                 </div>
             </div>
         </div>
@@ -1237,12 +1187,12 @@ with tab1:
                 st.markdown("""
                 <div style="background:#0F2620; border:1.5px solid #00D09C; border-radius:12px; padding:18px 22px; margin:16px 0;">
                     <div style="color:#00D09C; font-weight:700; font-size:1.1rem; margin-bottom:6px;">
-                        ✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.
+                        Demo simulation completed — no real mandate was changed.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("📅 Set Reminder for Month 5 Re-evaluation", key="btn_set_reminder"):
-                    st.toast("🎉 Reminder scheduled! You will receive a WhatsApp nudge at Month 5 and an SMS 7 days prior to debit.")
+                    st.toast("🎉 Reminder scheduled! Demo reminder saved in this session only; no WhatsApp or SMS will be sent.")
 
         # Action Cards Section with Edge-Case Defenses
         st.markdown("##### 🚀 3 Win-Win Action Cards:")
@@ -1262,7 +1212,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip_edge", use_container_width=True):
                     handle_action_execution(
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.",
+                        "Demo simulation completed — no real mandate was changed.",
                         "✅ Request Processed! Upcoming cycle skipped with ₹0 Groww penalty. Resumes automatically next month."
                     )
             with col_e2:
@@ -1276,7 +1226,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Pause", key="btn_exec_pause_edge", use_container_width=True):
                     handle_action_execution(
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.",
+                        "Demo simulation completed — no real mandate was changed.",
                         "✅ Request Processed! 3-Month Emergency Pause activated. Folio units continue compounding."
                     )
 
@@ -1297,8 +1247,8 @@ with tab1:
                     def update_step_down():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.",
-                        f"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. Monthly commitment adjusted to ₹{step_down_val:,}.",
+                        "Demo simulation completed — no real mandate was changed.",
+                        f"Demo simulation completed — no real mandate was changed. Monthly commitment adjusted to ₹{step_down_val:,}.",
                         update_step_down
                     )
 
@@ -1315,8 +1265,8 @@ with tab1:
                     def update_win_win():
                         st.session_state.active_sip["amount"] = step_down_val
                     handle_action_execution(
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.",
-                        f"✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. SIP reduced to ₹{step_down_val:,} for 6 months with auto-step-up scheduled.",
+                        "Demo simulation completed — no real mandate was changed.",
+                        f"Demo simulation completed — no real mandate was changed. SIP reduced to ₹{step_down_val:,} for 6 months with auto-step-up scheduled.",
                         update_win_win
                     )
 
@@ -1331,8 +1281,8 @@ with tab1:
                 """, unsafe_allow_html=True)
                 if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
                     handle_action_execution(
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty.",
-                        "✅ Request Processed! NPCI Mandate Updated with ₹0 Penalty. Upcoming cycle skipped; resumes automatically next month."
+                        "Demo simulation completed — no real mandate was changed.",
+                        "Demo simulation completed — no real mandate was changed. Upcoming cycle skipped; resumes automatically next month."
                     )
 
         # Free-Form Consultation Desk at bottom of Screen 3
@@ -1353,19 +1303,19 @@ with tab1:
             if st.button("✨ Consult Assistant", key="btn_consult_s3", use_container_width=True):
                 if custom_q.strip():
                     with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
-                        ff_eval = run_eval_gate(custom_q.strip(), GEMINI_API_KEY, DEFAULT_MODEL)
-                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GEMINI_API_KEY, DEFAULT_MODEL)
+                        ff_eval = run_eval_gate(custom_q.strip(), GROQ_API_KEY, DEFAULT_MODEL)
+                        ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GROQ_API_KEY, DEFAULT_MODEL)
                         
-                        # Store Gemini live response into session state
+                        # Store Groq live response into session state
                         if isinstance(ff_res, dict):
-                            st.session_state.ff_res = ff_res.get("message", "")
+                            st.session_state.ff_res = ff_res
                         else:
-                            st.session_state.ff_res = str(ff_res)
+                            st.session_state.ff_res = {"type": "SUCCESS", "message": str(ff_res), "title": "Assistant response"}
 
                         st.session_state.last_eval_log = {
                             "query": custom_q.strip(),
                             "eval_result": ff_eval,
-                            "latency_ms": 190,
+                            "latency_ms": None,
                             "timestamp": datetime.now().strftime("%H:%M:%S")
                         }
                         st.rerun()
@@ -1379,7 +1329,7 @@ with tab1:
         if st.session_state.last_eval_log:
             ff_log = st.session_state.last_eval_log
             ff_eval = ff_log["eval_result"]
-            ff_ans = generate_grounded_answer(ff_log["query"], ff_eval, GEMINI_API_KEY, DEFAULT_MODEL)
+            ff_ans = st.session_state.get("ff_res") or generate_grounded_answer(ff_log["query"], ff_eval, GROQ_API_KEY, DEFAULT_MODEL)
             
             if ff_ans.get("type") == "COMPLIANCE_VIOLATION":
                 st.markdown(f"""
@@ -1397,7 +1347,7 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                # Priority: Render live Gemini AI response if available; otherwise fall back to static grounded text
+                # Priority: Render live Groq AI response if available; otherwise fall back to static grounded text
                 display_output = st.session_state.get("ff_res") if st.session_state.get("ff_res") else ff_ans['message']
 
                 st.markdown(f"""
@@ -1562,7 +1512,7 @@ with tab3:
         if st.button("🟢 Run Valid Query: 'How do I change AutoPay date?'", use_container_width=True):
             test_q = "How do I change my AutoPay date to avoid salary delay?"
             t_start = time.time()
-            res = run_eval_gate(test_q, GEMINI_API_KEY, DEFAULT_MODEL)
+            res = run_eval_gate(test_q, GROQ_API_KEY, DEFAULT_MODEL)
             t_ms = round((time.time() - t_start) * 1000, 1)
             
             st.session_state.mentor_test_result = {
@@ -1575,7 +1525,7 @@ with tab3:
         if st.button("🛑 Simulate Violation: 'Which small cap fund gives 20%?'", use_container_width=True):
             test_q = "Which small cap fund will give me 20% guaranteed return this year?"
             t_start = time.time()
-            res = run_eval_gate(test_q, GEMINI_API_KEY, DEFAULT_MODEL)
+            res = run_eval_gate(test_q, GROQ_API_KEY, DEFAULT_MODEL)
             t_ms = round((time.time() - t_start) * 1000, 1)
             
             st.session_state.mentor_test_result = {
