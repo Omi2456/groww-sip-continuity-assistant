@@ -845,50 +845,6 @@ with tab1:
             summary_cols[2].metric("Illustrative value", f"₹{sip['current_value']:,}")
             st.caption(f"{sip['fund']} · {sip['instalments_paid']} instalments completed · Next debit: {sip['debit_date']} · Simulated account")
 
-        # Main problem selector: users may select any combination of the three disruptions.
-        st.markdown("""
-        <style>
-        @keyframes softGlow { 0%,100% { box-shadow:0 0 0 rgba(0,208,156,.08); } 50% { box-shadow:0 0 22px rgba(0,208,156,.24); } }
-        .problem-panel { background:linear-gradient(135deg,#142923 0%,#171D25 58%,#20202B 100%); border:1.5px solid #00D09C; border-radius:16px; padding:18px; margin:14px 0 18px; animation:softGlow 3s ease-in-out infinite; }
-        </style>
-        <div class="problem-panel"><div style="font-size:18px;font-weight:800;color:#00D09C;">⚡ WHAT HAS CHANGED?</div>
-        <div style="color:#E0E6E8;font-size:14px;margin-top:5px;">Select every situation that applies — choose one, two or all three.</div></div>
-        """, unsafe_allow_html=True)
-
-        selected_scenarios = []
-        if st.checkbox("🏠 Expense pressure", key="scenario_cashflow", help="My expenses increased or my current SIP is difficult to afford."):
-            selected_scenarios.append("CASH_FLOW_SHOCK")
-        if st.checkbox("📅 Salary-date mismatch", key="scenario_salary", help="My salary arrives after the scheduled SIP debit date."):
-            selected_scenarios.append("SALARY_DELAY")
-        if st.checkbox("⚠️ AutoPay debit failed", key="scenario_autopay", help="My bank or AutoPay mandate did not complete the debit."):
-            selected_scenarios.append("AUTOPAY_FAILURE")
-
-        scenario_context = {"portfolio": sip, "types": selected_scenarios}
-        scenario_details = []
-        step_down_val = int(sip["amount"])
-        if "CASH_FLOW_SHOCK" in selected_scenarios:
-            rent_increase = st.number_input("Monthly expense increase (₹)", min_value=0, max_value=100000, value=1500, step=500, key="scenario_expense_increase")
-            affordable_amount = st.number_input("What monthly SIP amount can you comfortably afford now? (₹)", min_value=500, max_value=25000, value=max(500, min(1500, int(sip["amount"]))), step=500, key="scenario_affordable_amount")
-            scenario_context.update({"x_rent": rent_increase, "calculated_step_down": affordable_amount})
-            step_down_val = affordable_amount
-            scenario_details.append(f"expenses increased by ₹{rent_increase}; affordable SIP ₹{affordable_amount}")
-        if "SALARY_DELAY" in selected_scenarios:
-            salary_day = st.selectbox("Usual salary arrival", ["5th", "7th", "10th", "15th", "Variable"], index=1, key="scenario_salary_day")
-            scenario_context["x_salary_date"] = salary_day
-            scenario_details.append(f"salary usually arrives on {salary_day}")
-        if "AUTOPAY_FAILURE" in selected_scenarios:
-            failure_reason = st.selectbox("AutoPay failure reason", ["Insufficient balance", "Mandate inactive or expired", "Bank declined the debit", "I don't know"], key="scenario_failure_reason")
-            scenario_context["failure_reason"] = failure_reason
-            scenario_details.append(f"AutoPay debit failed: {failure_reason}")
-
-        if selected_scenarios:
-            st.session_state["retention_scenario_context"] = scenario_context
-            st.session_state["retention_scenario_labels"] = selected_scenarios
-            st.session_state["retention_step_down_val"] = step_down_val
-            st.caption(f"{len(selected_scenarios)} of 3 situations selected. The AI Retention Engine will assess them together in Step 3.")
-        else:
-            st.info("Select at least one situation to continue.")
-
         # Evidence behind the illustrative value: invested amount plus an explicitly assumed uplift.
         invested = int(sip["total_invested"])
         illustrative_value = int(sip["current_value"])
@@ -909,6 +865,60 @@ with tab1:
             st.session_state.scenario_answer = None
             st.session_state.current_screen = 3
             st.rerun()
+
+
+        with st.container(border=True):
+            # Main problem selector: users may select any combination of the three disruptions.
+            st.markdown("""
+            <style>
+            @keyframes softGlow { 0%,100% { box-shadow:0 0 0 rgba(0,208,156,.10); } 50% { box-shadow:0 0 26px rgba(0,208,156,.30); } }
+            .stCheckbox label p { font-size:1.15rem !important; font-weight:650 !important; line-height:1.45 !important; }
+            .stCheckbox input { transform:scale(1.35); accent-color:#00D09C; }
+            </style>
+            """, unsafe_allow_html=True)
+
+            with st.container(border=True):
+                st.markdown("""
+                <div style="background:linear-gradient(135deg,#123A30 0%,#17232C 58%,#242033 100%);border:2px solid #00D09C;border-radius:14px;padding:20px 18px;margin:0 0 14px;animation:softGlow 3s ease-in-out infinite;">
+                  <div style="font-size:25px;font-weight:900;letter-spacing:.3px;color:#00D09C;">⚡ WHAT HAS CHANGED?</div>
+                  <div style="color:#F1F5F6;font-size:17px;font-weight:550;margin-top:8px;">Select every situation that applies — choose one, two or all three.</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            selected_scenarios = []
+            if st.checkbox("🏠 Expense pressure", key="scenario_cashflow", help="My expenses increased or my current SIP is difficult to afford."):
+                selected_scenarios.append("CASH_FLOW_SHOCK")
+            if st.checkbox("📅 Salary-date mismatch", key="scenario_salary", help="My salary arrives after the scheduled SIP debit date."):
+                selected_scenarios.append("SALARY_DELAY")
+            if st.checkbox("⚠️ AutoPay debit failed", key="scenario_autopay", help="My bank or AutoPay mandate did not complete the debit."):
+                selected_scenarios.append("AUTOPAY_FAILURE")
+
+            scenario_context = {"portfolio": sip, "types": selected_scenarios}
+            scenario_details = []
+            step_down_val = int(sip["amount"])
+            if "CASH_FLOW_SHOCK" in selected_scenarios:
+                rent_increase = st.number_input("Monthly expense increase (₹)", min_value=0, max_value=100000, value=1500, step=500, key="scenario_expense_increase")
+                affordable_amount = st.number_input("What monthly SIP amount can you comfortably afford now? (₹)", min_value=500, max_value=25000, value=max(500, min(1500, int(sip["amount"]))), step=500, key="scenario_affordable_amount")
+                scenario_context.update({"x_rent": rent_increase, "calculated_step_down": affordable_amount})
+                step_down_val = affordable_amount
+                scenario_details.append(f"expenses increased by ₹{rent_increase}; affordable SIP ₹{affordable_amount}")
+            if "SALARY_DELAY" in selected_scenarios:
+                salary_day = st.selectbox("Usual salary arrival", ["5th", "7th", "10th", "15th", "Variable"], index=1, key="scenario_salary_day")
+                scenario_context["x_salary_date"] = salary_day
+                scenario_details.append(f"salary usually arrives on {salary_day}")
+            if "AUTOPAY_FAILURE" in selected_scenarios:
+                failure_reason = st.selectbox("AutoPay failure reason", ["Insufficient balance", "Mandate inactive or expired", "Bank declined the debit", "I don't know"], key="scenario_failure_reason")
+                scenario_context["failure_reason"] = failure_reason
+                scenario_details.append(f"AutoPay debit failed: {failure_reason}")
+
+            if selected_scenarios:
+                st.session_state["retention_scenario_context"] = scenario_context
+                st.session_state["retention_scenario_labels"] = selected_scenarios
+                st.session_state["retention_step_down_val"] = step_down_val
+                st.caption(f"{len(selected_scenarios)} of 3 situations selected. The AI Retention Engine will assess them together in Step 3.")
+            else:
+                st.info("Select at least one situation to continue.")
+
 
         # Retention-first nudge: show the contribution gap without encouraging cancellation.
         st.markdown(f"""
