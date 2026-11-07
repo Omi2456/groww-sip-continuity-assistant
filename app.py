@@ -615,6 +615,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
     }
 
     client = get_groq_client(api_key)
+    api_error = "Groq returned an empty response; please try again."
     if client:
         portfolio = ctx.get("portfolio", {})
         context_lines = []
@@ -641,10 +642,11 @@ User question: {user_query}
 Simulated account/scenario context (use only if supplied): {'; '.join(context_lines) or 'No account context supplied'}
 Knowledge base: {kb}
 
-Answer in at most 140 words, using this structure:
-1. One sentence acknowledging the user's situation.
-2. Up to three relevant options or steps, only when useful.
-3. If an option depends on provider rules, briefly say availability varies; do not add a generic checklist.
+Answer the exact question directly in clear, useful language (normally 80–180 words; use more only when genuinely needed).
+For basic questions such as "What is SIP?", define the concept first and give a simple example.
+For requests to summarise the user's SIP, use only the supplied simulated account context and clearly label illustrative values.
+For scenario questions, explain likely implications and compare relevant continuity choices. Ask one short clarifying question only if a necessary fact is missing.
+Handle multiple distinct questions in one message by answering each part under a short heading or bullet.
 
 Rules:
 - Never invent Groww screen names, menu paths, pause durations, fees, minimums, cut-offs, processing times, bank charges or credit-score outcomes.
@@ -1027,8 +1029,11 @@ with tab1:
             st.session_state.pipeline_active = True
             st.rerun()
 
-        # The same three retention choices are always available, regardless of selected scenario.
+        # Once a retention action is selected, keep that choice active and disable the alternatives.
+        selected_action = st.session_state.get("last_retention_action")
         st.markdown("##### Explore a next step")
+        if selected_action:
+            st.caption("One option has been selected. The other actions are disabled for this session.")
         c_act1, c_act2, c_act3 = st.columns(3)
 
         with c_act1:
@@ -1040,7 +1045,7 @@ with tab1:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True):
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=bool(selected_action and selected_action != "step_down")):
                 def update_step_down():
                     st.session_state.active_sip["amount"] = step_down_val
                 handle_action_execution(
@@ -1059,7 +1064,7 @@ with tab1:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True):
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=bool(selected_action and selected_action != "win_win")):
                 original_amount = int(sip["amount"])
                 def update_win_win():
                     st.session_state.active_sip["amount"] = step_down_val
@@ -1084,12 +1089,15 @@ with tab1:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True):
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=bool(selected_action and selected_action != "skip")):
                 handle_action_execution(
                     "Skip option selected: the next instalment is marked as skipped in the prototype plan.",
                     "The next instalment is marked as skipped in your prototype plan.",
                     action_key="skip"
                 )
+
+        if st.session_state.get("action_feedback"):
+            st.success("✅ " + st.session_state.action_feedback)
 
         # Month-5 review reminder belongs only to the Win-Win step-down + proposed step-up plan.
         if st.session_state.get("last_retention_action") == "win_win":
@@ -1113,7 +1121,7 @@ with tab1:
         custom_q = st.text_area(
             "Enter your query:",
             value=st.session_state.free_form_query,
-            placeholder="e.g., If I pause for 3 months, does my money still earn market returns? Will my bank fine me?",
+            placeholder="Try: Give me a summary of my SIP — or ask any question about SIPs, affordability, debit dates or failed payments.",
             height=90,
             key="txt_custom_query_s3"
         )
