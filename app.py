@@ -914,6 +914,11 @@ with tab1:
                 st.info("Select at least one situation to continue.")
 
 
+        if selected_scenarios and st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_continue_retention"):
+            st.session_state.scenario_answer = None
+            st.session_state.current_screen = 3
+            st.rerun()
+
         # Retention-first nudge: show the contribution gap without encouraging cancellation.
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,#25191C,#152A25);border:1px solid #00D09C;border-radius:14px;padding:16px;margin:14px 0;">
@@ -947,11 +952,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        if selected_scenarios and st.button("✨ Get guidance for my situation", type="primary", use_container_width=True, key="btn_continue_retention"):
-            st.session_state.scenario_answer = None
-            st.session_state.current_screen = 3
-            st.rerun()
-
     # ==========================================================================
     # SCREEN 3: AI Retention Engine — action plan, simulator choices and audit
     # ==========================================================================
@@ -961,40 +961,53 @@ with tab1:
             st.rerun()
 
         st.markdown("### 🧠 Step 3 — AI Retention Engine")
-        st.caption("Your selected situations are assessed together. Review the guidance, compare continuity options and choose the next step.")
+        st.caption("Based on the situations you selected in Step 2, compare these continuity options and choose the one that fits your circumstances.")
 
         sip = st.session_state.active_sip
         selected_scenarios = st.session_state.get("retention_scenario_labels", [])
         scenario_context = st.session_state.get("retention_scenario_context", {"portfolio": sip})
         step_down_val = int(st.session_state.get("retention_step_down_val", sip["amount"]))
-        shock = selected_scenarios[0] if selected_scenarios else "CASH_FLOW_SHOCK"
-        is_low_sip = int(sip["amount"]) <= 1000
-        is_severe_crunch = "CASH_FLOW_SHOCK" in selected_scenarios and step_down_val < int(sip["amount"]) * 0.5
 
         if not selected_scenarios:
             st.warning("No disruption selected. Return to Step 2 and select at least one situation.")
         else:
-            scenario_parts = []
+            # Explain the user's selected situation and offer a practical, rules-based starting point.
+            guidance_lines = []
             if "CASH_FLOW_SHOCK" in selected_scenarios:
-                scenario_parts.append(f"monthly expenses increased by ₹{scenario_context.get('x_rent', 0)} and the affordable SIP amount is ₹{step_down_val}")
+                guidance_lines.append(
+                    f"**Expense pressure:** You reported a monthly expense increase of ₹{int(scenario_context.get('x_rent', 0)):,}. "
+                    f"A step-down to ₹{step_down_val:,} may reduce the monthly commitment while keeping a SIP contribution going."
+                )
             if "SALARY_DELAY" in selected_scenarios:
-                scenario_parts.append(f"salary usually arrives on {scenario_context.get('x_salary_date', 'a later date')}")
+                guidance_lines.append(
+                    f"**Salary-date mismatch:** Your salary usually arrives on {scenario_context.get('x_salary_date', 'a later date')}. "
+                    "Check whether changing the SIP debit date is supported and confirm the effective date before the next debit."
+                )
             if "AUTOPAY_FAILURE" in selected_scenarios:
-                scenario_parts.append(f"AutoPay debit failed; reported reason: {scenario_context.get('failure_reason', 'unknown')}")
-            scenario_query = "My SIP continuity situation includes: " + "; ".join(scenario_parts) + f". My current SIP is ₹{sip['amount']} per month. Give retention-first options and practical next steps."
-            if st.button("✨ Analyse my situation with AI", type="primary", use_container_width=True, key="btn_run_retention_ai"):
-                with st.spinner("Checking your situation against the SIP continuity knowledge base..."):
-                    scenario_eval = run_eval_gate(scenario_query, GROQ_API_KEY, DEFAULT_MODEL)
-                    scenario_answer = generate_grounded_answer(scenario_query, scenario_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context=scenario_context)
-                st.session_state.scenario_answer = scenario_answer
-                st.session_state.scenario_query = scenario_query
-                st.session_state.scenario_eval = scenario_eval
-                st.session_state.last_eval_log = {"query": scenario_query, "eval_result": scenario_eval, "latency_ms": None, "timestamp": datetime.now().strftime("%H:%M:%S")}
-            if st.session_state.get("scenario_answer"):
-                with st.container(border=True):
-                    st.markdown(f"**{st.session_state.scenario_answer.get('title', 'Your SIP retention plan')}**")
-                    st.markdown(st.session_state.scenario_answer.get("message", ""))
-                    st.caption("Guidance is based on your selected situations and the prototype knowledge base.")
+                guidance_lines.append(
+                    f"**AutoPay debit failure:** The reported reason is {scenario_context.get('failure_reason', 'not specified')}. "
+                    "Check the bank or mandate failure message first; resolve the cause before retrying the debit."
+                )
+            with st.container(border=True):
+                st.markdown("#### Your situation")
+                for line in guidance_lines:
+                    st.markdown(line)
+                st.markdown("#### Which continuity option may fit?")
+                st.markdown(
+                    "- **Step-Down:** Consider this first when the current monthly amount is difficult to afford. "
+                    "It lowers the commitment to the amount you entered in Step 2.\n"
+                    "- **Win-Win: Step-Down + Auto-Step-Up:** Consider this when you need relief now but expect your cash flow to improve. "
+                    "It records a proposed review before restoring the original amount in month 6.\n"
+                    "- **Skip Next Instalment:** Consider this when the issue is temporary or a debit needs time to be resolved. "
+                    "It represents one upcoming cycle only and remains subject to provider terms."
+                )
+                if "CASH_FLOW_SHOCK" in selected_scenarios:
+                    st.info(f"Starting point based on your input: compare Step-Down to ₹{step_down_val:,} with the Win-Win option. Choose Skip only if a one-cycle gap is more suitable.")
+                elif "SALARY_DELAY" in selected_scenarios and "AUTOPAY_FAILURE" not in selected_scenarios:
+                    st.info("Starting point based on your input: first check whether the debit date can be aligned with your salary date. If that cannot take effect in time, compare Skip Next Instalment with the other options.")
+                elif "AUTOPAY_FAILURE" in selected_scenarios:
+                    st.info("Starting point based on your input: identify and resolve the debit failure reason first. If the next debit is at risk, compare Skip Next Instalment with a manageable Step-Down.")
+                st.caption("This guidance is generated from your Step 2 selections using fixed prototype decision rules; it does not require an AI/API call and does not change a real SIP.")
 
         # Dynamic Action Execution Handler
         def handle_action_execution(toast_msg, feedback_msg, update_sip_fn=None, action_key=None):
@@ -1075,30 +1088,19 @@ with tab1:
                     action_key="skip"
                 )
 
-        # A relevant follow-up reminder is offered only after an action is selected.
-        last_action = st.session_state.get("last_retention_action")
-        if last_action:
-            reminder_labels = {
-                "step_down": "Set Reminder — Month 5 Step-Down Review",
-                "win_win": "Set Reminder — Month 5 Step-Up Check",
-                "skip": "Set Reminder — Next Instalment Follow-Up"
-            }
-            reminder_details = {
-                "step_down": "Review whether the reduced SIP amount is still affordable in month 5.",
-                "win_win": "Review the reduced SIP in month 5, before the proposed month-6 step-up.",
-                "skip": "Review cash flow and SIP continuity before the next scheduled instalment."
-            }
+        # Month-5 review reminder belongs only to the Win-Win step-down + proposed step-up plan.
+        if st.session_state.get("last_retention_action") == "win_win":
             st.markdown("##### 🔔 Follow-up reminder")
-            st.caption(reminder_details.get(last_action, "Review your SIP continuity plan."))
-            if st.button(reminder_labels.get(last_action, "Set Follow-up Reminder"), key="btn_set_action_reminder"):
+            st.caption("Review the reduced SIP in month 5, before the proposed month-6 step-up.")
+            if st.button("Set Reminder — Month 5 Step-Up Check", key="btn_set_action_reminder"):
                 st.session_state["retention_reminder"] = {
-                    "action": last_action,
-                    "message": reminder_details.get(last_action),
+                    "action": "win_win",
+                    "message": "Review the reduced SIP in month 5, before the proposed month-6 step-up.",
                     "status": "Added to this prototype session"
                 }
-                st.toast("Follow-up reminder added to your prototype plan.", icon="🔔")
-            if st.session_state.get("retention_reminder", {}).get("action") == last_action:
-                st.success("Reminder added: " + reminder_details[last_action])
+                st.toast("Month-5 Win-Win review reminder added to your prototype plan.", icon="🔔")
+            if st.session_state.get("retention_reminder", {}).get("action") == "win_win":
+                st.success("Reminder added: Review the reduced SIP in month 5, before the proposed month-6 step-up.")
 
         # Free-Form Consultation Desk at bottom of AI Retention Engine
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
@@ -1117,7 +1119,7 @@ with tab1:
         with col_ff1:
             if st.button("✨ Consult Assistant", key="btn_consult_s3", use_container_width=True):
                 if custom_q.strip():
-                    with st.spinner("Screening via Compliance Shield & Grounding with Groww Rules..."):
+                    with st.spinner("Checking your question and consulting the AI assistant..."):
                         ff_eval = run_eval_gate(custom_q.strip(), GROQ_API_KEY, DEFAULT_MODEL)
                         ff_res = generate_grounded_answer(custom_q.strip(), ff_eval, GROQ_API_KEY, DEFAULT_MODEL, lifecycle_context={"portfolio": st.session_state.active_sip})
                         
