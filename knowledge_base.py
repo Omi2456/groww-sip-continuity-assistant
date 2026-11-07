@@ -1,84 +1,57 @@
-"""
-Groww SIP Continuity Assistant - Knowledge Base & Evaluation Benchmark
-NextLeap Graduation Project: 12-Month First-Time Investor SIP Retention
-"""
-
-# Official Groww SIP Rules & Grounding Data
+# Project knowledge base: educational concepts and explicit source limitations.
 GROWW_SIP_KNOWLEDGE_BASE = {
-    "lead_time_rules": {
-        "title": "Edit SIP Lead Time Policy",
-        "min_days_before_debit": 3,
-        "max_days_before_debit": 7,
+    "scope": {
+        "title": "Prototype scope",
         "description": (
-            "Any modification to an active SIP (date change, amount change, pause, skip, or cancel) "
-            "must be submitted at least 3 to 7 working days prior to your next scheduled instalment date. "
-            "If requested within 3 working days of the debit date, the upcoming instalment may still be deducted, "
-            "and modifications will reflect starting from the subsequent billing cycle."
+            "This assistant provides general SIP lifecycle education and illustrates possible continuity options. "
+            "It is not an official Groww service and does not execute SIP, mandate, bank, AMC, NPCI or reminder actions."
         ),
-        "source": "Groww Help Center > Mutual Funds > Managing SIPs"
+        "source": "Project product definition and user research"
     },
-    "mandate_rules": {
-        "title": "AutoPay Mandate Re-Alignment Policy",
-        "upi_autopay_days": "3 to 5 working days",
-        "enach_netbanking_days": "7 to 30 working days",
-        "recommended_buffer_days": "3 to 5 days after salary credit",
+    "existing_units": {
+        "title": "Existing mutual-fund units",
         "description": (
-            "Aligning your AutoPay date with a shifted salary cycle requires bank and NPCI mandate re-verification. "
-            "UPI AutoPay modifications take 3-5 working days, while NetBanking or physical eNACH mandates require 7-30 working days. "
-            "Groww strongly recommends scheduling SIP debits 3-5 days AFTER your expected salary credit date "
-            "(e.g., if salary arrives on 1st-5th, select 7th or 10th) to prevent debit failures and bank bounce charges."
+            "Stopping future SIP instalments does not by itself redeem units already allotted. "
+            "Existing units generally remain invested until the investor redeems them; their market value can rise or fall."
         ),
-        "source": "NPCI eNACH Guidelines & Groww AutoPay Desk"
+        "source": "General mutual-fund concept; confirm account-specific details with the relevant platform/AMC"
     },
-    "skip_instalment_rules": {
-        "title": "Skip Instalment Flexibility",
-        "max_consecutive_skips": 3,
-        "penalty_groww": "₹0 (Zero)",
-        "penalty_amc": "₹0 (Zero)",
+    "cashflow_options": {
+        "title": "Illustrative continuity options",
         "description": (
-            "If you face a temporary monthly cash crunch, you can 'Skip' an upcoming instalment without cancelling your SIP. "
-            "Groww charges ₹0 penalty, and mutual fund AMCs charge ₹0 penalty for skipped instalments. "
-            "Your SIP remains active and automatically resumes on the subsequent scheduled month."
+            "Depending on platform and scheme support, investors may be able to modify a SIP, pause future instalments, "
+            "or cancel and later create a new SIP. Availability, minimum amounts, cut-off dates and processing times vary. "
+            "The Step-Down + Auto-Step-Up combination in this prototype is a proposed product innovation, not a claim "
+            "that Groww currently offers an automatic restoration feature."
         ),
-        "source": "Groww SIP Flexibility Portal"
+        "source": "Product concept; not an official Groww policy"
     },
-    "step_down_rules": {
-        "title": "Temporary Step-Down (Affordability Preservation)",
-        "minimum_allowed_amount": "₹500 (or AMC scheme minimum, typically ₹1,000)",
+    "failed_debits": {
+        "title": "Failed SIP debit considerations",
         "description": (
-            "Rather than stopping or cancelling your SIP during tight financial periods, you can reduce your monthly commitment "
-            "(e.g., from ₹5,000 down to ₹1,000). This preserves the rupee-cost averaging advantage, keeps your investing habit intact, "
-            "and allows you to step back up seamlessly whenever your cashflow normalizes."
+            "A failed debit may result in a charge from the bank or payment provider depending on the account and terms. "
+            "Do not assume a universal zero-fee outcome or make a universal credit-score guarantee. "
+            "Users should check their bank's schedule of charges and applicable payment mandate terms."
         ),
-        "source": "Groww Smart Investor Guide"
+        "source": "Bank/payment-provider terms; user should verify with their bank"
     },
-    "pause_vs_cancel_rules": {
-        "title": "Pause vs. Cancel Unit Safety & Compounding Impact",
-        "pause_duration_options": "1 to 6 months",
-        "unit_safety": "100% Safe - Existing units remain fully invested in the market",
-        "cancellation_behavioral_risk": "67% of first-time investors who cancel never restart within 12 months",
+    "processing_times": {
+        "title": "SIP and mandate processing times",
         "description": (
-            "Pausing temporarily suspends future monthly deductions for 1-6 months while your accumulated mutual fund units "
-            "remain active, safely compounding and earning NAV growth. Mandate stays registered. "
-            "Cancelling completely terminates the recurring mandate. While invested units stay until sold, cancellation breaks the habit; "
-            "historical data shows 67% of first-time investors do not restart within a year, sacrificing lakhs in compounding wealth."
+            "The prototype does not assert a universal processing SLA. Modification and mandate timelines can depend "
+            "on the platform, AMC, bank, payment method, request time and applicable cut-offs. Verify the current timeline "
+            "with the relevant provider before relying on a change."
         ),
-        "source": "AMFI Investor Insights & Groww Retention Research"
+        "source": "Provider-specific; verify current official help documentation"
     },
-    "autopay_failure_and_penalties": {
-        "title": "AutoPay Failure, Retry Windows & ₹0 Penalty Policy",
-        "groww_penalty": "₹0 (Groww never charges any penalty for failed debits)",
-        "cibil_impact": "None (Mutual fund SIP failures do NOT impact CIBIL or credit scores)",
-        "bank_bounce_charge_warning": "Your bank may levy an ECS/NACH bounce fee (typically ₹250–₹500) for insufficient funds",
-        "retry_window": "24 to 48 hours retry window available in Groww app",
-        "pay_now_option": "Instant UPI clearing via '⚡ Pay Now' button directly on the Groww order card",
-        "consecutive_failures_warning": "If 3 consecutive debits fail, AMC automatically cancels the SIP mandate to protect your bank account from recurring bounce fees",
+    "research_limitations": {
+        "title": "Research evidence limitations",
         "description": (
-            "Groww charges ₹0 penalty for failed SIP debits, and missed mutual fund instalments do NOT report to CIBIL or damage credit ratings. "
-            "However, your bank might charge an ECS bounce fee. You can clear the failed instalment immediately using Groww's '⚡ Pay Now' feature via UPI "
-            "before AMC cutoff time."
+            "The project research includes 32 survey responses and five qualitative interviews. These are exploratory "
+            "inputs and should not be presented as representative population estimates or causal proof. "
+            "No verified 67% SIP restart statistic is used."
         ),
-        "source": "Groww Payment Settlement Desk & SEBI Investor Guidelines"
+        "source": "Project survey and interview research"
     }
 }
 
