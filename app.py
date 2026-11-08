@@ -1267,6 +1267,7 @@ STRICT SAFETY:
                 "message": feedback_msg
             }
             st.session_state.last_retention_action = action_key
+            st.session_state.retention_action_attempts = st.session_state.get("retention_action_attempts", 0) + 1
             st.session_state.retention_reminder = None
             st.session_state.pipeline_active = True
             st.rerun()
@@ -1275,16 +1276,20 @@ STRICT SAFETY:
         # After execution, lock alternatives to prevent contradictory prototype states.
         selected_action = st.session_state.get("last_retention_action")
         st.markdown("##### Explore a next step")
+        action_attempts = st.session_state.get("retention_action_attempts", 0)
         if selected_action:
             action_labels = {
                 "step_down": "Step-Down SIP",
                 "win_win": "Win-Win: Step-Down + proposed Auto-Step-Up",
                 "skip": "Skip Next Instalment"
             }
-            st.success(f"{action_labels.get(selected_action, 'Your selected option')} has been recorded in this prototype. Other actions are locked to keep this SIP journey consistent.")
-            st.caption("You can change your decision below. The prototype will reverse the current simulated action before you choose another option.")
+            st.success(f"{action_labels.get(selected_action, 'Your selected option')} has been recorded in this prototype. Other actions are locked.")
+            if action_attempts < 2:
+                st.caption("You have one final opportunity to change this decision. After your second selection, the choice will be locked for this prototype journey.")
+            else:
+                st.info("Your second and final selection has been recorded. All continuity options are now locked for this prototype journey.")
         else:
-            st.caption("The AI recommendation is a suggestion, not a restriction. You can choose any of the three options. Once you execute one, the other actions will be locked for this SIP journey.")
+            st.caption("The AI recommendation is a suggestion, not a restriction. You can choose any of the three options. You may make one confirmed change after your first selection; your second selection will be final.")
         c_act1, c_act2, c_act3 = st.columns(3)
 
         with c_act1:
@@ -1296,7 +1301,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=bool(selected_action)):
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=bool(selected_action) or action_attempts >= 2):
                 def update_step_down():
                     st.session_state.active_sip["amount"] = step_down_val
                 handle_action_execution(
@@ -1315,7 +1320,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=bool(selected_action)):
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=bool(selected_action) or action_attempts >= 2):
                 original_amount = int(st.session_state.get("baseline_sip_amount", sip["amount"]))
                 def update_win_win():
                     st.session_state.active_sip["amount"] = step_down_val
@@ -1340,16 +1345,16 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=bool(selected_action)):
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=bool(selected_action) or action_attempts >= 2):
                 handle_action_execution(
                     "Skip option selected: the next instalment is marked as skipped in the prototype plan.",
                     "The next instalment is marked as skipped in your prototype plan.",
                     action_key="skip"
                 )
 
-        # Allow a deliberate, confirmed reversal before selecting a different action.
-        if selected_action:
-            with st.expander("↩️ Change decision"):
+        # Permit exactly one confirmed correction, between the first and second selections.
+        if selected_action and action_attempts == 1:
+            with st.expander("↩️ Change decision (one time only)"):
                 st.warning("Changing your decision will reverse the current simulated action and remove its related prototype reminder or step-up plan.")
                 if "decision_revision" not in st.session_state:
                     st.session_state.decision_revision = 0
