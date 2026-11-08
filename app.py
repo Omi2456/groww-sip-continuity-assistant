@@ -688,6 +688,9 @@ def offline_compliance_guard(query: str) -> dict:
         r"\b(large cap|mid cap|small cap|flexi cap|multi cap|index fund|debt fund|equity fund|hybrid fund)\b.{0,35}\b(vs|versus|or|better|best|compare|choose)\b",
         r"\b(vs|versus|compare)\b.{0,45}\b(large cap|mid cap|small cap|flexi cap|multi cap|index fund|debt fund|equity fund|hybrid fund)\b",
         r"\b(where|what) should i invest\b|\bwhat to invest in\b|\bhelp me choose\b.{0,40}\b(invest|fund|product|scheme)\b",
+        r"\b(which|what)\b.{0,45}\b(investment|investment type|category|sector)\b",
+        r"\b(compare|difference between|versus|vs)\b.{0,80}\b(funds?|caps?|equity|debt|index|hybrid)\b",
+        r"\b(difference between)\b.{0,80}\b(large cap|mid cap|small cap|flexi cap|index|equity|debt)\b",
     ]
     higher_return_patterns = [
         r"\b(higher|higher|better|more|maximise|maximize|increase|improve|boost|highest|maximum)\b.{0,45}\b(returns?|profits?|gains?)\b",
@@ -695,6 +698,7 @@ def offline_compliance_guard(query: str) -> dict:
         r"\bhow (can|do) i\b.{0,45}\b(earn|get|make|generate)\b.{0,30}\b(more|higher|better)\b.{0,20}\b(returns?|profits?|gains?)\b",
         r"\b(return|profit|gain)\b.{0,20}\b(target|goal|expect|expected|guarantee|assure)\b",
         r"\b(expected|expect|predict|estimate|target|guarantee|assure)\b.{0,35}\b(returns?|profits?|gains?)\b",
+        r"\b(returns?|profits?|gains?)\b.{0,35}\b(expect|expected|predict|estimate|target|guarantee|assure)\b",
         r"\b(returns?|profits?|gains?)\b.{0,35}\b(\d+(?:\.\d+)?\s*%|range|per annum|pa|annual)\b",
         r"\b(\d+(?:\.\d+)?\s*%|range)\b.{0,30}\b(returns?|profits?|gains?)\b",
         r"\b(double|triple) my money\b|\b(guaranteed|assured)\b.{0,25}\b(returns?|profits?|outcomes?)\b",
