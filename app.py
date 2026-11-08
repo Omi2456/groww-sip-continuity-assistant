@@ -29,7 +29,7 @@ st.set_page_config(
     page_title="Groww SIP Continuity Assistant",
     page_icon="🌱",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Groq configuration (environment variables or Streamlit secrets).
@@ -468,8 +468,24 @@ if st.session_state.center_notification:
     # Clear after rendering so it will not reappear on a later unrelated rerun.
     st.session_state.center_notification = None
 
-# Clean Sidebar: Groww Header Logo, Portfolio Summary Card, SEBI Badge, Toggle
+# Clean Sidebar: keep the theme switch as the first, immediately visible control.
 with st.sidebar:
+    if "app_theme" not in st.session_state:
+        st.session_state.app_theme = "Dark"
+    st.markdown("""
+    <div style="font-size:12px; color:#00D09C; font-weight:800; letter-spacing:.08em; margin-bottom:5px;">
+        🎨 APPEARANCE
+    </div>
+    """, unsafe_allow_html=True)
+    st.session_state.app_theme = st.radio(
+        "Choose theme",
+        ["Dark", "Light"],
+        horizontal=True,
+        index=0 if st.session_state.app_theme == "Dark" else 1,
+        key="app_theme_picker",
+        label_visibility="collapsed"
+    )
+    st.markdown("<hr style='border-color:#2B313A; margin:8px 0 14px 0;'>", unsafe_allow_html=True)
     st.markdown("""
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
         <span style="font-size: 2.2rem;">🌱</span>
@@ -502,20 +518,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
-    
-    st.markdown("### 🎨 Appearance")
-    if "app_theme" not in st.session_state:
-        st.session_state.app_theme = "Dark"
-    st.session_state.app_theme = st.radio(
-        "Choose theme",
-        ["Dark", "Light"],
-        horizontal=True,
-        index=0 if st.session_state.app_theme == "Dark" else 1,
-        key="app_theme_picker",
-        label_visibility="collapsed"
-    )
-
     # Toggle exactly without "(For Mentors)"
     audit_mode = st.toggle(
         "🛡️ Show Live Eval Gate Audit Logs",
@@ -524,11 +526,6 @@ with st.sidebar:
     )
     
     st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
-    
-    if GROQ_API_KEY:
-        st.markdown('<span class="badge-pass">🟢 </span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local grounded fallback active</span>', unsafe_allow_html=True)
 
 # Theme-aware contrast, dashboard metrics and responsive navigation.
 if st.session_state.get("app_theme", "Dark") == "Light":
