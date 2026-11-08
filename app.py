@@ -1351,9 +1351,11 @@ STRICT SAFETY:
         if selected_action:
             with st.expander("↩️ Change decision"):
                 st.warning("Changing your decision will reverse the current simulated action and remove its related prototype reminder or step-up plan.")
+                if "decision_revision" not in st.session_state:
+                    st.session_state.decision_revision = 0
                 confirm_change = st.checkbox(
                     "I understand — reverse my current prototype action so I can choose another option.",
-                    key="confirm_change_retention_decision"
+                    key=f"confirm_change_retention_decision_{st.session_state.decision_revision}"
                 )
                 if st.button("Confirm and change decision", key="btn_confirm_change_retention_decision", type="secondary", disabled=not confirm_change, use_container_width=True):
                     baseline_amount = st.session_state.get("baseline_sip_amount")
@@ -1365,6 +1367,7 @@ STRICT SAFETY:
                     st.session_state.retention_reminder = None
                     st.session_state.action_feedback = None
                     st.session_state.pipeline_active = False
+                    st.session_state.decision_revision = st.session_state.get("decision_revision", 0) + 1
                     st.session_state.center_notification = {
                         "icon": "↩️",
                         "title": "Decision reset",
