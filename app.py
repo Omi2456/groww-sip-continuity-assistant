@@ -679,10 +679,16 @@ def offline_compliance_guard(query: str) -> dict:
     q = (query or "").lower().strip()
 
     advisory_terms = [
-        "which fund", "which stock", "best stock", "recommend a fund",
-        "recommend fund", "should i buy", "which small cap", "best mutual fund",
-        "guaranteed return", "guarantee my return", "double my money",
-        "options trading", "crypto", "panic sell", "redeem all"
+        "which fund", "which mutual fund", "which sip", "which stock", "best stock",
+        "recommend a fund", "recommend fund", "fund to invest", "fund should i buy",
+        "best mutual fund", "top mutual fund", "specific fund", "fund picks",
+        "which etf", "best etf", "which bond", "best bond", "which crypto",
+        "which alternative investment", "alternative investment product",
+        "where should i invest", "what should i invest in", "which product should i invest",
+        "return target", "target return", "expected return", "how much return",
+        "guaranteed return", "guarantee my return", "guaranteed profit",
+        "guaranteed outcome", "double my money", "options trading",
+        "panic sell", "redeem all"
     ]
     if any(term in q for term in advisory_terms):
         return {
@@ -726,7 +732,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
         return {
             "type": "COMPLIANCE_VIOLATION",
             "title": "Investment-advice request not supported",
-            "message": "I can help explain SIP continuity, affordability and payment-process questions, but I can't recommend a fund, predict returns or guarantee an investment outcome. I can still help you compare contribution and pause scenarios.",
+            "message": "I can't select or recommend specific funds or other investment products, provide return targets, or promise guaranteed outcomes. Investments carry risk, including possible loss of capital, and returns are not guaranteed. I can help with general SIP continuity, affordability and payment-process questions.",
             "citations": [],
             "action_cards": []
         }
@@ -833,7 +839,7 @@ Rules:
     return {
         "type": "SUCCESS",
         "title": "SIP continuity guidance",
-        "message": fallback.get(intent, fallback["GENERAL"]),
+        "message": "**Local rules-based fallback (AI provider unavailable):** " + fallback.get(intent, fallback["GENERAL"]),
         "action_cards": [],
         "api_error": api_error
     }
@@ -1276,6 +1282,7 @@ STRICT SAFETY:
         # After execution, lock alternatives to prevent contradictory prototype states.
         selected_action = st.session_state.get("last_retention_action")
         st.markdown("##### Explore a next step")
+        st.caption("Prototype simulation only: selecting an option records a simulated action; it does not change a real SIP or payment mandate.")
         action_attempts = st.session_state.get("retention_action_attempts", 0)
         if selected_action:
             action_labels = {
@@ -1383,7 +1390,7 @@ STRICT SAFETY:
         # Month-5 review reminder belongs only to the Win-Win step-down + proposed step-up plan.
         if st.session_state.get("last_retention_action") == "win_win":
             st.markdown("##### 🔔 Follow-up reminder")
-            st.caption("Review the reduced SIP in month 5, before the proposed month-6 step-up.")
+            st.caption("Simulated prototype reminder only — review the reduced SIP in month 5, before the proposed month-6 step-up. No real notification is scheduled.")
             if st.button("Set Reminder — Month 5 Step-Up Check", key="btn_set_action_reminder"):
                 st.session_state["retention_reminder"] = {
                     "action": "win_win",
@@ -1397,7 +1404,7 @@ STRICT SAFETY:
                 }
                 st.rerun()
             if (st.session_state.get("retention_reminder") or {}).get("action") == "win_win":
-                st.caption("Reminder added to this prototype session: review the reduced SIP in month 5, before the proposed month-6 step-up.")
+                st.caption("Simulated reminder saved in this prototype session only; no real notification is scheduled.")
 
         # Free-Form Consultation Desk at bottom of AI Retention Engine
         st.markdown("<hr style='border-color:#2B313A; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
