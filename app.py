@@ -713,7 +713,15 @@ def offline_compliance_guard(query: str) -> dict:
         r"\b(\d+(?:\.\d+)?\s*%|range)\b.{0,30}\b(returns?|profits?|gains?)\b",
         r"\b(double|triple) my money\b|\b(guaranteed|assured)\b.{0,25}\b(returns?|profits?|outcomes?)\b",
     ]
-    if any(re.search(pattern, q) for pattern in investment_choice_patterns + higher_return_patterns):
+    basic_sip_education = bool(re.fullmatch(
+        r"(what is (an? )?(sip|sips|systematic investment plan|systematic investment plans)"
+        r"|what does (a )?sip mean|what is the meaning of (a )?sip"
+        r"|explain (a )?sip|how does (a )?sip work|how do sips work)",
+        q
+    ))
+    if not basic_sip_education and any(
+        re.search(pattern, q) for pattern in investment_choice_patterns + higher_return_patterns
+    ):
         return {
             "is_compliant": False,
             "confidence_score": None,
