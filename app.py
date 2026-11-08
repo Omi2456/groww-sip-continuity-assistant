@@ -675,26 +675,35 @@ def get_groq_client(api_key: str):
 
 
 def offline_compliance_guard(query: str) -> dict:
-    """Fast, transparent intent and safety pre-check; scores are not calibrated confidence."""
-    q = (query or "").lower().strip()
+    """Deterministic pre-generation guard for investment-selection and return advice."""
+    q = re.sub(r"[^a-z0-9%₹]+", " ", (query or "").lower()).strip()
+    q = re.sub(r"\\s+", " ", q)
 
-    advisory_terms = [
-        "which fund", "which mutual fund", "which sip", "which stock", "best stock",
-        "recommend a fund", "recommend fund", "fund to invest", "fund should i buy",
-        "best mutual fund", "top mutual fund", "specific fund", "fund picks",
-        "which etf", "best etf", "which bond", "best bond", "which crypto",
-        "which alternative investment", "alternative investment product",
-        "where should i invest", "what should i invest in", "which product should i invest",
-        "return target", "target return", "expected return", "how much return",
-        "guaranteed return", "guarantee my return", "guaranteed profit",
-        "guaranteed outcome", "double my money", "options trading",
-        "panic sell", "redeem all"
+    # Match the intent rather than relying on a few exact phrasings. Keep operational
+    # SIP questions (for example, changing a debit date) outside this guard.
+    investment_choice_patterns = [
+        r"\\b(which|what|best|top|better|good|right)\\b.{0,55}\\b(funds?|mutual funds?|sips?|stocks?|shares?|etfs?|bonds?|cryptos?|investment products?|products?|schemes?)\\b",
+        r"\\b(funds?|mutual funds?|sips?|stocks?|shares?|etfs?|bonds?|cryptos?|investment products?|products?|schemes?)\\b.{0,55}\\b(which|what|best|top|better|should i choose|should i pick|should i buy|to invest|to select)\\b",
+        r"\\b(recommend|suggest|choose|pick|select|compare)\\b.{0,55}\\b(funds?|mutual funds?|sips?|stocks?|shares?|etfs?|bonds?|cryptos?|investment products?|products?|schemes?)\\b",
+        r"\\b(large cap|mid cap|small cap|flexi cap|multi cap|index fund|debt fund|equity fund|hybrid fund)\\b.{0,35}\\b(vs|versus|or|better|best|compare|choose)\\b",
+        r"\\b(vs|versus|compare)\\b.{0,45}\\b(large cap|mid cap|small cap|flexi cap|multi cap|index fund|debt fund|equity fund|hybrid fund)\\b",
+        r"\\b(where|what) should i invest\\b|\\bwhat to invest in\\b|\\bhelp me choose\\b.{0,40}\\b(invest|fund|product|scheme)\\b",
     ]
-    if any(term in q for term in advisory_terms):
+    higher_return_patterns = [
+        r"\\b(higher|higher|better|more|maximise|maximize|increase|improve|boost|highest|maximum)\\b.{0,45}\\b(returns?|profits?|gains?)\\b",
+        r"\\b(returns?|profits?|gains?)\\b.{0,45}\\b(higher|better|more|highest|maximum|guaranteed)\\b",
+        r"\\bhow (can|do) i\\b.{0,45}\\b(earn|get|make|generate)\\b.{0,30}\\b(more|higher|better)\\b.{0,20}\\b(returns?|profits?|gains?)\\b",
+        r"\\b(return|profit|gain)\\b.{0,20}\\b(target|goal|expect|expected|guarantee|assure)\\b",
+        r"\\b(expected|expect|predict|estimate|target|guarantee|assure)\\b.{0,35}\\b(returns?|profits?|gains?)\\b",
+        r"\\b(returns?|profits?|gains?)\\b.{0,35}\\b(\\d+(?:\\.\\d+)?\\s*%|range|per annum|pa|annual)\\b",
+        r"\\b(\\d+(?:\\.\\d+)?\\s*%|range)\\b.{0,30}\\b(returns?|profits?|gains?)\\b",
+        r"\\b(double|triple) my money\\b|\\b(guaranteed|assured)\\b.{0,25}\\b(returns?|profits?|outcomes?)\\b",
+    ]
+    if any(re.search(pattern, q) for pattern in investment_choice_patterns + higher_return_patterns):
         return {
             "is_compliant": False,
             "confidence_score": None,
-            "violation_reason": "The request seeks a specific investment recommendation or guaranteed outcome.",
+            "violation_reason": "The request seeks investment selection or return advice.",
             "detected_intent": "UNALLOWED_ADVICE"
         }
 
@@ -732,7 +741,7 @@ def generate_grounded_answer(user_query: str, eval_result: dict, api_key: str = 
         return {
             "type": "COMPLIANCE_VIOLATION",
             "title": "Investment-advice request not supported",
-            "message": "I can't select or recommend specific funds or other investment products, provide return targets, or promise guaranteed outcomes. Investments carry risk, including possible loss of capital, and returns are not guaranteed. I can help with general SIP continuity, affordability and payment-process questions.",
+            "message": "I can't recommend or compare funds or investment products, provide selection criteria or expected return ranges, or promise or target returns. I can help with general SIP continuity, affordability, or payment-process questions.",
             "citations": [],
             "action_cards": []
         }
@@ -1461,9 +1470,6 @@ STRICT SAFETY:
                     </div>
                     <div style="color:#FFFFFF; font-size:15px; line-height:1.6; margin-bottom:12px;">
                         {ff_ans['message']}
-                    </div>
-                    <div style="font-size:14px; color:#E0E0E0;">
-                        <b>SEBI Regulatory Guidance:</b> For mutual fund scheme selection, risk profiling, or investment advice, please consult an AMFI-registered distributor or SEBI-registered Investment Adviser.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
