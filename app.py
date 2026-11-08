@@ -1255,8 +1255,14 @@ STRICT SAFETY:
             for p in [30, 75, 100]:
                 time.sleep(0.12)
                 prog.progress(p)
+            # Preserve the pre-action SIP amount so users can switch options
+            # without losing the original baseline in this simulated journey.
+            if "baseline_sip_amount" not in st.session_state:
+                st.session_state.baseline_sip_amount = int(st.session_state.active_sip["amount"])
             if update_sip_fn:
                 update_sip_fn()
+            if action_key != "win_win":
+                st.session_state.pop("proposed_step_up", None)
             st.session_state.action_feedback = feedback_msg
             st.session_state.center_notification = {
                 "icon": "✅",
@@ -1268,11 +1274,10 @@ STRICT SAFETY:
             st.session_state.pipeline_active = True
             st.rerun()
 
-        # Once a retention action is selected, keep that choice active and disable the alternatives.
+        # AI guidance is advisory: the user remains free to choose or change any option.
         selected_action = st.session_state.get("last_retention_action")
         st.markdown("##### Explore a next step")
-        if selected_action:
-            st.caption("One option has been selected. The other actions are disabled for this session.")
+        st.caption("The AI recommendation is a suggestion, not a restriction. You can choose any option or switch to another option; each selection updates this simulated prototype journey.")
         c_act1, c_act2, c_act3 = st.columns(3)
 
         with c_act1:
@@ -1284,7 +1289,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=bool(selected_action and selected_action != "step_down")):
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=False):
                 def update_step_down():
                     st.session_state.active_sip["amount"] = step_down_val
                 handle_action_execution(
@@ -1303,8 +1308,8 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=bool(selected_action and selected_action != "win_win")):
-                original_amount = int(sip["amount"])
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=False):
+                original_amount = int(st.session_state.get("baseline_sip_amount", sip["amount"]))
                 def update_win_win():
                     st.session_state.active_sip["amount"] = step_down_val
                     st.session_state["proposed_step_up"] = {
@@ -1328,7 +1333,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=bool(selected_action and selected_action != "skip")):
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=False):
                 handle_action_execution(
                     "Skip option selected: the next instalment is marked as skipped in the prototype plan.",
                     "The next instalment is marked as skipped in your prototype plan.",
