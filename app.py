@@ -1271,10 +1271,20 @@ STRICT SAFETY:
             st.session_state.pipeline_active = True
             st.rerun()
 
-        # AI guidance is advisory: the user remains free to choose or change any option.
+        # AI guidance is advisory. All options stay available until the user executes one.
+        # After execution, lock alternatives to prevent contradictory prototype states.
         selected_action = st.session_state.get("last_retention_action")
         st.markdown("##### Explore a next step")
-        st.caption("The AI recommendation is a suggestion, not a restriction. You can choose any option or switch to another option; each selection updates this simulated prototype journey.")
+        if selected_action:
+            action_labels = {
+                "step_down": "Step-Down SIP",
+                "win_win": "Win-Win: Step-Down + proposed Auto-Step-Up",
+                "skip": "Skip Next Instalment"
+            }
+            st.success(f"{action_labels.get(selected_action, 'Your selected option')} has been recorded in this prototype. Other actions are locked to keep this SIP journey consistent.")
+            st.caption("You can change your decision below. The prototype will reverse the current simulated action before you choose another option.")
+        else:
+            st.caption("The AI recommendation is a suggestion, not a restriction. You can choose any of the three options. Once you execute one, the other actions will be locked for this SIP journey.")
         c_act1, c_act2, c_act3 = st.columns(3)
 
         with c_act1:
@@ -1286,7 +1296,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=False):
+            if st.button("Execute Step-Down", key="btn_exec_step_down", use_container_width=True, disabled=bool(selected_action)):
                 def update_step_down():
                     st.session_state.active_sip["amount"] = step_down_val
                 handle_action_execution(
@@ -1305,7 +1315,7 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=False):
+            if st.button("Execute Win-Win", key="btn_exec_win_win", use_container_width=True, disabled=bool(selected_action)):
                 original_amount = int(st.session_state.get("baseline_sip_amount", sip["amount"]))
                 def update_win_win():
                     st.session_state.active_sip["amount"] = step_down_val
@@ -1330,12 +1340,37 @@ STRICT SAFETY:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=False):
+            if st.button("Execute Skip", key="btn_exec_skip", use_container_width=True, disabled=bool(selected_action)):
                 handle_action_execution(
                     "Skip option selected: the next instalment is marked as skipped in the prototype plan.",
                     "The next instalment is marked as skipped in your prototype plan.",
                     action_key="skip"
                 )
+
+        # Allow a deliberate, confirmed reversal before selecting a different action.
+        if selected_action:
+            with st.expander("↩️ Change decision"):
+                st.warning("Changing your decision will reverse the current simulated action and remove its related prototype reminder or step-up plan.")
+                confirm_change = st.checkbox(
+                    "I understand — reverse my current prototype action so I can choose another option.",
+                    key="confirm_change_retention_decision"
+                )
+                if st.button("Confirm and change decision", key="btn_confirm_change_retention_decision", type="secondary", disabled=not confirm_change, use_container_width=True):
+                    baseline_amount = st.session_state.get("baseline_sip_amount")
+                    if baseline_amount is not None:
+                        st.session_state.active_sip["amount"] = int(baseline_amount)
+                    st.session_state.pop("proposed_step_up", None)
+                    st.session_state.pop("baseline_sip_amount", None)
+                    st.session_state.last_retention_action = None
+                    st.session_state.retention_reminder = None
+                    st.session_state.action_feedback = None
+                    st.session_state.pipeline_active = False
+                    st.session_state.center_notification = {
+                        "icon": "↩️",
+                        "title": "Decision reset",
+                        "message": "Your previous simulated action has been reversed. You can now choose any continuity option."
+                    }
+                    st.rerun()
 
         # Month-5 review reminder belongs only to the Win-Win step-down + proposed step-up plan.
         if st.session_state.get("last_retention_action") == "win_win":
