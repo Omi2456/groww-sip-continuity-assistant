@@ -504,6 +504,18 @@ with st.sidebar:
     
     st.markdown("<hr style='border-color:#2B313A; margin:12px 0;'>", unsafe_allow_html=True)
     
+    st.markdown("### 🎨 Appearance")
+    if "app_theme" not in st.session_state:
+        st.session_state.app_theme = "Dark"
+    st.session_state.app_theme = st.radio(
+        "Choose theme",
+        ["Dark", "Light"],
+        horizontal=True,
+        index=0 if st.session_state.app_theme == "Dark" else 1,
+        key="app_theme_picker",
+        label_visibility="collapsed"
+    )
+
     # Toggle exactly without "(For Mentors)"
     audit_mode = st.toggle(
         "🛡️ Show Live Eval Gate Audit Logs",
@@ -517,6 +529,105 @@ with st.sidebar:
         st.markdown('<span class="badge-pass">🟢 </span>', unsafe_allow_html=True)
     else:
         st.markdown('<span class="badge-pass" style="color:#00D09C;">ℹ️ Local grounded fallback active</span>', unsafe_allow_html=True)
+
+# Theme-aware contrast, dashboard metrics and responsive navigation.
+if st.session_state.get("app_theme", "Dark") == "Light":
+    st.markdown("""
+    <style>
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background:#F5F7FA !important; color:#17212B !important;
+    }
+    [data-testid="stSidebar"], [data-testid="stSidebar"] > div {
+        background:#E9EEF3 !important; color:#17212B !important;
+    }
+    .stApp p, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3,
+    .stApp h4, .stApp h5, .stApp [data-testid="stCaptionContainer"] {
+        color:#263442 !important;
+    }
+    [data-testid="stMetric"], [data-testid="metric-container"] {
+        background:#FFFFFF !important; border:1px solid #D5DEE7 !important;
+        border-radius:12px !important; padding:14px 16px !important;
+        box-shadow:0 2px 8px rgba(25,45,65,.06) !important;
+    }
+    [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p {
+        color:#46576A !important; font-size:14px !important; font-weight:700 !important;
+    }
+    [data-testid="stMetricValue"], [data-testid="stMetricValue"] div,
+    [data-testid="stMetricValue"] > div {
+        color:#102A43 !important; font-size:clamp(24px,3vw,34px) !important;
+        font-weight:800 !important; opacity:1 !important;
+    }
+    [data-testid="stMetricDelta"] { color:#167A60 !important; }
+    .stTabs [data-baseweb="tab-list"] {
+        background:#E8EEF4 !important; border:1px solid #CBD5E1 !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background:#FFFFFF !important; color:#263442 !important;
+        border:1px solid #CBD5E1 !important; white-space:nowrap !important;
+    }
+    .stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span {
+        color:#263442 !important;
+    }
+    .stTabs [aria-selected="true"], .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span {
+        background:#00B889 !important; color:#062B23 !important;
+    }
+    .stTextInput input, .stTextArea textarea, .stNumberInput input,
+    .stSelectbox [data-baseweb="select"] > div {
+        background:#FFFFFF !important; color:#17212B !important;
+        border-color:#9AAABD !important;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-color:#CBD5E1 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <style>
+    [data-testid="stMetric"], [data-testid="metric-container"] {
+        background:#1B2027 !important; border:1px solid #39434F !important;
+        border-radius:12px !important; padding:14px 16px !important;
+    }
+    [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p {
+        color:#D4DCE5 !important; font-size:14px !important; font-weight:700 !important;
+    }
+    [data-testid="stMetricValue"], [data-testid="stMetricValue"] div,
+    [data-testid="stMetricValue"] > div {
+        color:#FFFFFF !important; font-size:clamp(24px,3vw,34px) !important;
+        font-weight:800 !important; opacity:1 !important;
+    }
+    [data-testid="stMetricDelta"] { color:#00D09C !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Keep all three primary sections readable; allow horizontal scrolling on narrow screens.
+st.markdown("""
+<style>
+.stTabs [data-baseweb="tab-list"] {
+    display:flex !important; flex-wrap:nowrap !important;
+    overflow-x:auto !important; overflow-y:hidden !important;
+    scrollbar-width:thin !important; gap:8px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    flex:0 0 auto !important; min-width:max-content !important;
+    white-space:nowrap !important; color:#FFFFFF !important;
+}
+.stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span {
+    color:#FFFFFF !important; font-weight:700 !important;
+}
+.stTabs [aria-selected="true"], .stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {
+    color:#101820 !important;
+}
+@media (max-width: 700px) {
+    .stTabs [data-baseweb="tab"] { padding:9px 12px !important; font-size:13px !important; }
+    [data-testid="stMetricValue"], [data-testid="stMetricValue"] div {
+        font-size:25px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ==============================================================================
 # 3. AI COMPLIANCE EVAL-GATE & SMART Q&A FALLBACK ENGINE
@@ -886,6 +997,7 @@ with tab1:
         # Active SIP Summary Card — values are simulated demo data.
         with st.container(border=True):
             st.markdown("#### Your SIP at a glance")
+            st.caption("All amounts below are simulated prototype figures.")
             summary_cols = st.columns(3)
             summary_cols[0].metric("Monthly SIP", f"₹{sip['amount']:,}")
             summary_cols[1].metric("Total invested", f"₹{sip['total_invested']:,}")
